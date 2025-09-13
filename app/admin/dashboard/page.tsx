@@ -33,23 +33,30 @@ import {
 } from "recharts";
 import { DashboardSkeleton } from "../components/SkeletonLoaders";
 
-interface Analytics {
-  totalUsers: number;
-  totalQuizzes: number;
-  totalQuestions: number;
-  totalAttempts: number;
-  recentActivity: any[];
+interface DashboardData {
+  stats: {
+    totalUsers: number;
+    totalQuizzes: number;
+    totalQuestions: number;
+    totalAttempts: number;
+  };
+  recentActivities: any[];
   activityData: Array<{
     date: string;
     activities: number;
   }>;
-  popularCategories: any[];
+  questions: any[];
+  quizzes: any[];
+  performanceMetrics: {
+    avgScore: number;
+    completionRate: number;
+    userRetention: number;
+    platformActivity: number;
+  };
 }
 
 export default function DashboardPage() {
-  const [analytics, setAnalytics] = useState<Analytics | null>(null);
-  const [questions, setQuestions] = useState<any[]>([]);
-  const [quizzes, setQuizzes] = useState<any[]>([]);
+  const [dashboardData, setDashboardData] = useState<DashboardData | null>(null);
   const [loading, setLoading] = useState(true);
 
   const getPieChartColors = () => {
@@ -79,7 +86,7 @@ export default function DashboardPage() {
     gray: "var(--mantine-color-gray-6)",
   };
 
-  const difficultyData = questions.reduce((acc: any[], question: any) => {
+  const difficultyData = dashboardData?.questions.reduce((acc: any[], question: any) => {
     const existing = acc.find(
       (item) => item.difficulty === question.difficulty
     );
@@ -89,67 +96,35 @@ export default function DashboardPage() {
       acc.push({ difficulty: question.difficulty, count: 1 });
     }
     return acc;
-  }, []);
+  }, []) || [];
 
-  const quizStatsData = quizzes.map((quiz: any) => ({
+  const quizStatsData = dashboardData?.quizzes.map((quiz: any) => ({
     name:
       quiz.title.length > 15 ? quiz.title.substring(0, 15) + "..." : quiz.title,
     questions: quiz._count?.questions || 0,
     attempts: quiz._count?.quizAttempts || 0,
-  }));
+  })) || [];
 
   const recentActivityData =
-    analytics?.activityData?.map((item) => ({
+    dashboardData?.activityData?.map((item: any) => ({
       day: moment(item.date).format("MMM DD"),
       activities: item.activities,
     })) || [];
 
-  const fetchAnalytics = async () => {
+  const fetchDashboardData = async () => {
     try {
-      console.log("Fetching analytics data...");
-      const response = await fetch("/api/v1/analytics");
+      console.log("Fetching dashboard data...");
+      const response = await fetch("/api/v1/dashboard");
       const data = await response.json();
-      console.log("Analytics API response:", data);
+      console.log("Dashboard API response:", data);
 
       if (data.success) {
-        // Map the response data to match our Analytics interface
-        const formattedData = {
-          ...data.data, // Spread the stats and other data
-          recentActivity: data.data.recentActivities || [],
-          activityData: data.data.activity || [],
-          popularCategories: [], // Add empty array if not present
-        };
-        console.log("Formatted analytics data:", formattedData);
-        setAnalytics(formattedData);
+        setDashboardData(data.data);
       } else {
-        console.error("Error in analytics response:", data.error);
+        console.error("Error in dashboard response:", data.error);
       }
     } catch (error) {
-      console.error("Error fetching analytics:", error);
-    }
-  };
-
-  const fetchQuestions = async () => {
-    try {
-      const response = await fetch("/api/v1/questions");
-      const data = await response.json();
-      if (data.success) {
-        setQuestions(data.questions || []);
-      }
-    } catch (error) {
-      console.error("Error fetching questions:", error);
-    }
-  };
-
-  const fetchQuizzes = async () => {
-    try {
-      const response = await fetch("/api/v1/quizzes");
-      const data = await response.json();
-      if (data.success) {
-        setQuizzes(data.quizzes || []);
-      }
-    } catch (error) {
-      console.error("Error fetching quizzes:", error);
+      console.error("Error fetching dashboard data:", error);
     }
   };
 
@@ -159,27 +134,9 @@ export default function DashboardPage() {
       console.log("Loading dashboard data...");
 
       try {
-        // First, log a test activity
-        console.log("Attempting to log test activity...");
-        const testResponse = await fetch("/api/v1/activity/test", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            userId: "test-user",
-            type: "USER_REGISTERED",
-            title: "Test activity",
-            metadata: { test: true },
-          }),
-        });
-
-        const testResult = await testResponse.json();
-        console.log("Test activity log result:", testResult);
-
-        // Then fetch the dashboard data
-        console.log("Fetching analytics, questions, and quizzes...");
-        await Promise.all([fetchAnalytics(), fetchQuestions(), fetchQuizzes()]);
+        // Fetch the dashboard data
+        console.log("Fetching dashboard data...");
+        await fetchDashboardData();
       } catch (error) {
         console.error("Error in dashboard data loading:", error);
       } finally {
@@ -233,11 +190,11 @@ export default function DashboardPage() {
                 Total Quizzes
               </Text>
               <Badge color="blue" variant="light" size="sm">
-                {quizzes.length}
+                {dashboardData?.stats.totalQuizzes || 0}
               </Badge>
             </Group>
             <Text size="xl" fw={700} c="blue">
-              {quizzes.length}
+              {dashboardData?.stats.totalQuizzes || 0}
             </Text>
             <Text size="xs" c="dimmed">
               Active quizzes
@@ -249,11 +206,11 @@ export default function DashboardPage() {
                 Questions
               </Text>
               <Badge color="orange" variant="light" size="sm">
-                {questions.length}
+                {dashboardData?.stats.totalQuestions || 0}
               </Badge>
             </Group>
             <Text size="xl" fw={700} c="orange">
-              {questions.length}
+              {dashboardData?.stats.totalQuestions || 0}
             </Text>
             <Text size="xs" c="dimmed">
               In question bank
@@ -265,11 +222,11 @@ export default function DashboardPage() {
                 Total Users
               </Text>
               <Badge color="violet" variant="light" size="sm">
-                {analytics?.totalUsers || 0}
+                {dashboardData?.stats.totalUsers || 0}
               </Badge>
             </Group>
             <Text size="xl" fw={700} c="violet">
-              {analytics?.totalUsers || 0}
+              {dashboardData?.stats.totalUsers || 0}
             </Text>
             <Text size="xs" c="dimmed">
               Registered users
@@ -424,14 +381,14 @@ export default function DashboardPage() {
               <Group justify="space-between" align="center" mb="md">
                 <Title order={4}>Recent Activity</Title>
                 <Badge color="gray" variant="light" size="sm">
-                  {analytics?.recentActivity?.length || 0}
+                  {dashboardData?.recentActivities?.length || 0}
                 </Badge>
               </Group>
               <Stack gap="md" h="100%" justify="space-between">
                 <Box flex={1}>
-                  {analytics?.recentActivity &&
-                  analytics.recentActivity.length > 0 ? (
-                    analytics.recentActivity
+                  {dashboardData?.recentActivities &&
+                  dashboardData.recentActivities.length > 0 ? (
+                    dashboardData.recentActivities
                       .slice(0, 5)
                       .map((activity: any, index: number) => (
                         <Card
