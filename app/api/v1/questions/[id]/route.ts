@@ -5,10 +5,10 @@ import { ActivityType } from "@/lib/generated/prisma";
 
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const { id } = params;
+    const { id } = await params;
 
     if (!id) {
       return NextResponse.json(
@@ -32,7 +32,9 @@ export async function DELETE(
     await ActivityService.logActivity(
       existingQuestion.createdById,
       ActivityType.QUESTION_DELETED,
-      `Deleted question: "${existingQuestion.question.substring(0, 50)}${existingQuestion.question.length > 50 ? '...' : ''}"`,
+      `Deleted question: "${existingQuestion.question.substring(0, 50)}${
+        existingQuestion.question.length > 50 ? "..." : ""
+      }"`,
       { questionId: id, difficulty: existingQuestion.difficulty }
     );
 
@@ -51,10 +53,10 @@ export async function DELETE(
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const { id } = params;
+    const { id } = await params;
 
     if (!id) {
       return NextResponse.json(
@@ -101,10 +103,10 @@ export async function GET(
 
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const { id } = params;
+    const { id } = await params;
     const body = await request.json();
     const { question, options, correctAnswer, difficulty, explanation } = body;
 
@@ -151,7 +153,9 @@ export async function PUT(
     await ActivityService.logActivity(
       existingQuestion.createdById,
       ActivityType.QUESTION_UPDATED,
-      `Updated question: "${question.substring(0, 50)}${question.length > 50 ? '...' : ''}"`,
+      `Updated question: "${question.substring(0, 50)}${
+        question.length > 50 ? "..." : ""
+      }"`,
       { questionId: id, difficulty: difficulty.toUpperCase() }
     );
 
