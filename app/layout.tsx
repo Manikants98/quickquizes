@@ -2,6 +2,7 @@
 import { ColorSchemeScript, MantineProvider } from "@mantine/core";
 import { Notifications } from "@mantine/notifications";
 import { useEffect, useState } from "react";
+import { LoadingScreen } from "./admin/components/LoadingScreen";
 import "./globals.css";
 
 export default function RootLayout({
@@ -11,6 +12,8 @@ export default function RootLayout({
 }>) {
   const [isClient, setIsClient] = useState(false);
   const [savedTheme, setSavedTheme] = useState("blue");
+  const [isLoading, setIsLoading] = useState(true);
+  const [showContent, setShowContent] = useState(false);
 
   useEffect(() => {
     setIsClient(true);
@@ -26,6 +29,14 @@ export default function RootLayout({
     window.addEventListener("storage", handleStorageChange);
     return () => window.removeEventListener("storage", handleStorageChange);
   }, []);
+
+  const handleLoadingComplete = () => {
+    setIsLoading(false);
+    // Small delay for smooth transition
+    setTimeout(() => {
+      setShowContent(true);
+    }, 300);
+  };
 
   console.error = () => {};
   return (
@@ -46,8 +57,19 @@ export default function RootLayout({
             fontFamily: "var(--font-geist-sans), sans-serif",
           }}
         >
-          <Notifications position="top-right" />
-          {children}
+          <LoadingScreen
+            isVisible={isLoading}
+            onComplete={handleLoadingComplete}
+          />
+          <div
+            style={{
+              opacity: showContent ? 1 : 0,
+              transition: "opacity 0.5s ease-in-out",
+            }}
+          >
+            <Notifications position="top-right" />
+            {children}
+          </div>
         </MantineProvider>
       </body>
     </html>

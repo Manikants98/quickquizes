@@ -1,7 +1,6 @@
 "use client";
 
 import {
-  Avatar,
   Badge,
   Box,
   Button,
@@ -119,11 +118,8 @@ export default function DashboardPage() {
 
   const fetchDashboardData = async () => {
     try {
-      console.log("Fetching dashboard data...");
       const response = await fetch("/api/v1/dashboard");
       const data = await response.json();
-      console.log("Dashboard API response:", data);
-
       if (data.success) {
         setDashboardData(data.data);
       } else {
@@ -137,11 +133,7 @@ export default function DashboardPage() {
   useEffect(() => {
     const loadData = async () => {
       setLoading(true);
-      console.log("Loading dashboard data...");
-
       try {
-        // Fetch the dashboard data
-        console.log("Fetching dashboard data...");
         await fetchDashboardData();
       } catch (error) {
         console.error("Error in dashboard data loading:", error);

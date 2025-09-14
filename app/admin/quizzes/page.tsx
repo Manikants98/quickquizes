@@ -20,6 +20,7 @@ import {
 import { useForm } from "@mantine/form";
 import { notifications } from "@mantine/notifications";
 import { IconEdit, IconEye, IconPlus, IconTrash } from "@tabler/icons-react";
+import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { QuizzesGridSkeleton } from "../components/SkeletonLoaders";
 
@@ -45,6 +46,7 @@ export default function QuizzesPage() {
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [pageSize] = useState(6);
+  const router = useRouter();
 
   const quizForm = useForm({
     initialValues: {
@@ -243,9 +245,11 @@ export default function QuizzesPage() {
                           size="xs"
                           leftSection={<IconEye size="0.8rem" />}
                           onClick={() =>
-                            (window.location.href = `/admin/questions?quizId=${
-                              quiz.id
-                            }&quizTitle=${encodeURIComponent(quiz.title)}`)
+                            router.push(
+                              `/admin/questions?quizId=${
+                                quiz.id
+                              }&quizTitle=${encodeURIComponent(quiz.title)}`
+                            )
                           }
                         >
                           Question ({quiz._count?.questions || 0})
@@ -276,7 +280,7 @@ export default function QuizzesPage() {
                 </Card>
               ))}
             </SimpleGrid>
-            {quizzes.length === 0 && !loading && (
+            {quizzes && quizzes.length === 0 && !loading && (
               <Card withBorder p="xl" bg="gray.0">
                 <Stack align="center" gap="md">
                   <IconPlus size="3rem" color="gray" />
