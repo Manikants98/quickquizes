@@ -56,7 +56,9 @@ interface DashboardData {
 }
 
 export default function DashboardPage() {
-  const [dashboardData, setDashboardData] = useState<DashboardData | null>(null);
+  const [dashboardData, setDashboardData] = useState<DashboardData | null>(
+    null
+  );
   const [loading, setLoading] = useState(true);
 
   const getPieChartColors = () => {
@@ -86,24 +88,28 @@ export default function DashboardPage() {
     gray: "var(--mantine-color-gray-6)",
   };
 
-  const difficultyData = dashboardData?.questions.reduce((acc: any[], question: any) => {
-    const existing = acc.find(
-      (item) => item.difficulty === question.difficulty
-    );
-    if (existing) {
-      existing.count += 1;
-    } else {
-      acc.push({ difficulty: question.difficulty, count: 1 });
-    }
-    return acc;
-  }, []) || [];
+  const difficultyData =
+    dashboardData?.questions.reduce((acc: any[], question: any) => {
+      const existing = acc.find(
+        (item) => item.difficulty === question.difficulty
+      );
+      if (existing) {
+        existing.count += 1;
+      } else {
+        acc.push({ difficulty: question.difficulty, count: 1 });
+      }
+      return acc;
+    }, []) || [];
 
-  const quizStatsData = dashboardData?.quizzes.map((quiz: any) => ({
-    name:
-      quiz.title.length > 15 ? quiz.title.substring(0, 15) + "..." : quiz.title,
-    questions: quiz._count?.questions || 0,
-    attempts: quiz._count?.quizAttempts || 0,
-  })) || [];
+  const quizStatsData =
+    dashboardData?.quizzes.map((quiz: any) => ({
+      name:
+        quiz.title.length > 15
+          ? quiz.title.substring(0, 15) + "..."
+          : quiz.title,
+      questions: quiz._count?.questions || 0,
+      attempts: quiz._count?.quizAttempts || 0,
+    })) || [];
 
   const recentActivityData =
     dashboardData?.activityData?.map((item: any) => ({
@@ -388,179 +394,158 @@ export default function DashboardPage() {
                 <Box flex={1}>
                   {dashboardData?.recentActivities &&
                   dashboardData.recentActivities.length > 0 ? (
-                    dashboardData.recentActivities
-                      .slice(0, 5)
-                      .map((activity: any, index: number) => (
-                        <Card
-                          key={index}
-                          withBorder
-                          radius="md"
-                          p="md"
-                          bg="var(--mantine-color-body)"
-                          mb="sm"
-                          style={{
-                            borderLeft: `3px solid ${
-                              activity.type.includes("CREATED")
-                                ? "var(--mantine-color-green-6)"
-                                : activity.type.includes("UPDATED")
-                                ? "var(--mantine-color-blue-6)"
-                                : activity.type.includes("DELETED")
-                                ? "var(--mantine-color-red-6)"
-                                : "var(--mantine-color-gray-6)"
-                            }`,
-                            transition: "transform 0.2s",
-                            "&:hover": {
-                              transform: "translateX(4px)",
-                            },
-                          }}
-                        >
-                          <Group
-                            justify="space-between"
-                            align="flex-start"
-                            wrap="nowrap"
+                    <Box style={{ position: "relative" }}>
+                      {dashboardData.recentActivities
+                        .slice(0, 5)
+                        .map((activity: any, index: number) => (
+                          <Box
+                            key={index}
+                            style={{
+                              position: "relative",
+                              paddingLeft: "40px",
+                              marginBottom: index < 4 ? "16px" : "0",
+                            }}
                           >
-                            <Box style={{ flex: 1, minWidth: 0 }}>
+                            {/* Timeline line */}
+                            {index < 4 && (
+                              <Box
+                                style={{
+                                  position: "absolute",
+                                  left: "19px",
+                                  top: "32px",
+                                  bottom: "-16px",
+                                  width: "2px",
+                                  backgroundColor:
+                                    "var(--mantine-color-gray-3)",
+                                }}
+                              />
+                            )}
+
+                            {/* Timeline dot */}
+                            <Box
+                              style={{
+                                position: "absolute",
+                                left: "8px",
+                                top: "8px",
+                                width: "24px",
+                                height: "24px",
+                                borderRadius: "50%",
+                                backgroundColor: activity.type.includes(
+                                  "CREATED"
+                                )
+                                  ? "var(--mantine-color-green-6)"
+                                  : activity.type.includes("UPDATED")
+                                  ? "var(--mantine-color-blue-6)"
+                                  : activity.type.includes("DELETED")
+                                  ? "var(--mantine-color-red-6)"
+                                  : "var(--mantine-color-gray-6)",
+                                border: "3px solid var(--mantine-color-body)",
+                                boxShadow:
+                                  "0 0 0 2px var(--mantine-color-gray-3)",
+                                display: "flex",
+                                alignItems: "center",
+                                justifyContent: "center",
+                              }}
+                            >
+                              <Text size="xs" c="white" fw={600}>
+                                {activity.user?.name
+                                  ?.charAt(0)
+                                  ?.toUpperCase() || "S"}
+                              </Text>
+                            </Box>
+
+                            <Card
+                              withBorder
+                              radius="md"
+                              p="md"
+                              bg="var(--mantine-color-body)"
+                              style={{
+                                borderLeft: `3px solid ${
+                                  activity.type.includes("CREATED")
+                                    ? "var(--mantine-color-green-6)"
+                                    : activity.type.includes("UPDATED")
+                                    ? "var(--mantine-color-blue-6)"
+                                    : activity.type.includes("DELETED")
+                                    ? "var(--mantine-color-red-6)"
+                                    : "var(--mantine-color-gray-6)"
+                                }`,
+                                transition: "transform 0.2s",
+                                "&:hover": {
+                                  transform: "translateX(4px)",
+                                },
+                              }}
+                            >
                               <Group
-                                gap="xs"
-                                mb={4}
+                                justify="space-between"
                                 align="flex-start"
                                 wrap="nowrap"
                               >
-                                <Avatar
-                                  size={24}
-                                  radius="xl"
-                                  color={
-                                    activity.type.includes("CREATED")
-                                      ? "green"
-                                      : activity.type.includes("UPDATED")
-                                      ? "blue"
-                                      : activity.type.includes("DELETED")
-                                      ? "red"
-                                      : "gray"
-                                  }
-                                >
-                                  {activity.user?.name
-                                    ?.charAt(0)
-                                    ?.toUpperCase() || "S"}
-                                </Avatar>
-                                <Box>
-                                  <Text size="sm" fw={500} lineClamp={1}>
-                                    {activity.user?.name || "System"}
-                                  </Text>
-                                </Box>
-                                <Badge
-                                  color={
-                                    activity.type.includes("CREATED")
-                                      ? "green"
-                                      : activity.type.includes("UPDATED")
-                                      ? "blue"
-                                      : activity.type.includes("DELETED")
-                                      ? "red"
-                                      : "gray"
-                                  }
-                                  variant="light"
-                                  size="xs"
-                                  radius="sm"
-                                >
-                                  {activity.type
-                                    .split("_")
-                                    .map(
-                                      (word: string) =>
-                                        word.charAt(0) +
-                                        word.slice(1).toLowerCase()
-                                    )
-                                    .join(" ")}
-                                </Badge>
-                              </Group>
-                              <Text
-                                size="sm"
-                                fw={500}
-                                style={{
-                                  wordBreak: "break-word",
-                                  display: "block",
-                                  lineHeight: 1.4,
-                                  marginBottom: 4,
-                                }}
-                              >
-                                {activity.title || "Activity"}
-                              </Text>
-                            </Box>
-                            <Box mt={4}>
-                              {activity.metadata && (
-                                <Box>
-                                  {activity.type === "QUIZ_ATTEMPTED" && (
-                                    <Group gap={4} align="center">
-                                      <Badge
-                                        variant="outline"
-                                        color="teal"
-                                        size="xs"
-                                      >
-                                        Score: {activity.metadata.score}/
-                                        {activity.metadata.totalPoints}
-                                      </Badge>
-                                      <Badge
-                                        variant="outline"
-                                        color="blue"
-                                        size="xs"
-                                      >
-                                        {activity.metadata.percentage}%
-                                      </Badge>
-                                    </Group>
-                                  )}
-                                  {activity.type === "QUESTION_CREATED" && (
+                                <Box style={{ flex: 1, minWidth: 0 }}>
+                                  <Group
+                                    gap="xs"
+                                    mb={4}
+                                    align="flex-start"
+                                    wrap="nowrap"
+                                  >
+                                    <Box>
+                                      <Text size="sm" fw={500} lineClamp={1}>
+                                        {activity.user?.name || "System"}
+                                      </Text>
+                                    </Box>
                                     <Badge
-                                      variant="outline"
                                       color={
-                                        activity.metadata.difficulty === "EASY"
+                                        activity.type.includes("CREATED")
                                           ? "green"
-                                          : activity.metadata.difficulty ===
-                                            "MEDIUM"
-                                          ? "yellow"
-                                          : "red"
-                                      }
-                                      size="xs"
-                                    >
-                                      {activity.metadata.difficulty}
-                                    </Badge>
-                                  )}
-                                  {activity.type === "USER_REGISTERED" && (
-                                    <Badge
-                                      variant="outline"
-                                      color={
-                                        activity.metadata.role === "ADMIN"
-                                          ? "violet"
+                                          : activity.type.includes("UPDATED")
+                                          ? "blue"
+                                          : activity.type.includes("DELETED")
+                                          ? "red"
                                           : "gray"
                                       }
+                                      variant="light"
                                       size="xs"
+                                      radius="sm"
                                     >
-                                      {activity.metadata.role}
+                                      {activity.type
+                                        .split("_")
+                                        .map(
+                                          (word: string) =>
+                                            word.charAt(0) +
+                                            word.slice(1).toLowerCase()
+                                        )
+                                        .join(" ")}
                                     </Badge>
-                                  )}
-                                  {activity.type === "QUIZ_CREATED" && (
-                                    <Text size="xs" c="dimmed" truncate>
-                                      ID: {activity.metadata.quizId}
-                                    </Text>
-                                  )}
+                                  </Group>
+                                  <Text
+                                    size="sm"
+                                    fw={500}
+                                    style={{
+                                      wordBreak: "break-word",
+                                      display: "block",
+                                      lineHeight: 1.4,
+                                      marginBottom: 4,
+                                    }}
+                                  >
+                                    {activity.title || "Activity"}
+                                  </Text>
                                 </Box>
-                              )}
-                              <Text size="xs" c="dimmed" mt={4}>
-                                {new Date(activity.time).toLocaleString()}
-                              </Text>
-                            </Box>
-                            <Text
-                              size="xs"
-                              c="dimmed"
-                              style={{
-                                whiteSpace: "nowrap",
-                                marginLeft: "12px",
-                                alignSelf: "flex-start",
-                              }}
-                            >
-                              {moment(activity.time).fromNow()}
-                            </Text>
-                          </Group>
-                        </Card>
-                      ))
+
+                                <Text
+                                  size="xs"
+                                  c="dimmed"
+                                  style={{
+                                    whiteSpace: "nowrap",
+                                    marginLeft: "12px",
+                                    alignSelf: "flex-start",
+                                  }}
+                                >
+                                  {moment(activity.time).calendar()}
+                                </Text>
+                              </Group>
+                            </Card>
+                          </Box>
+                        ))}
+                    </Box>
                   ) : (
                     <Card withBorder radius="sm" p="lg" bg="gray.0" h="100%">
                       <Stack align="center" justify="center" gap="xs" h="100%">

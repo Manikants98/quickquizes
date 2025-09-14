@@ -35,6 +35,11 @@ interface Analytics {
     userRetention: number;
     platformActivity: number;
   };
+  activeUsers: {
+    count: number;
+    percentage: number;
+    total: number;
+  };
 }
 
 export default function AnalyticsPage() {
@@ -72,8 +77,8 @@ export default function AnalyticsPage() {
       ) : (
         <Stack gap="lg">
           <Title order={2}>Analytics Dashboard</Title>
-          <SimpleGrid cols={{ base: 1, sm: 2, lg: 4 }} spacing="lg">
-            <Card withBorder>
+          <SimpleGrid cols={{ base: 1, sm: 2, lg: 4 }} spacing="lg" style={{ alignItems: "stretch" }}>
+            <Card withBorder h="100%">
               <Group justify="space-between" align="flex-start">
                 <Box>
                   <Text size="sm" c="dimmed">
@@ -85,31 +90,23 @@ export default function AnalyticsPage() {
                 </Box>
                 <IconTrendingUp size={20} color="green" />
               </Group>
-              <Progress value={75} size="sm" mt="xs" color="teal" />
-              <Text size="xs" c="dimmed" mt={4}>
-                +12% from last month
-              </Text>
             </Card>
 
-            <Card withBorder>
+            <Card withBorder h="100%">
               <Group justify="space-between" align="flex-start">
                 <Box>
                   <Text size="sm" c="dimmed">
                     Active Users
                   </Text>
-                  <Text size="sm" fw={500}>
-                    67%
+                  <Text size="xl" fw={700}>
+                    {analytics?.activeUsers?.count || 0}
                   </Text>
                 </Box>
                 <IconTrendingUp size={20} color="teal" />
               </Group>
-              <Progress value={80} size="sm" mt="xs" color="teal" />
-              <Text size="xs" c="dimmed" mt={4}>
-                +15% from last month
-              </Text>
             </Card>
 
-            <Card withBorder>
+            <Card withBorder h="100%">
               <Group justify="space-between" align="flex-start">
                 <Box>
                   <Text size="sm" c="dimmed">
@@ -121,13 +118,9 @@ export default function AnalyticsPage() {
                 </Box>
                 <IconTrendingUp size={20} color="blue" />
               </Group>
-              <Progress value={60} size="sm" mt="xs" color="blue" />
-              <Text size="xs" c="dimmed" mt={4}>
-                +8% from last month
-              </Text>
             </Card>
 
-            <Card withBorder>
+            <Card withBorder h="100%">
               <Group justify="space-between" align="flex-start">
                 <Box>
                   <Text size="sm" c="dimmed">
@@ -139,13 +132,9 @@ export default function AnalyticsPage() {
                 </Box>
                 <IconTrendingUp size={20} color="green" />
               </Group>
-              <Progress value={85} size="sm" mt="xs" color="green" />
-              <Text size="xs" c="dimmed" mt={4}>
-                +25% from last month
-              </Text>
             </Card>
 
-            <Card withBorder>
+            <Card withBorder h="100%">
               <Group justify="space-between" align="flex-start">
                 <Box>
                   <Text size="sm" c="dimmed">
@@ -157,67 +146,48 @@ export default function AnalyticsPage() {
                 </Box>
                 <IconTrendingDown size={20} color="red" />
               </Group>
-              <Progress value={45} size="sm" mt="xs" color="orange" />
-              <Text size="xs" c="dimmed" mt={4}>
-                -5% from last month
-              </Text>
             </Card>
 
-            <Card withBorder>
+            <Card withBorder h="100%">
               <Group justify="space-between" align="flex-start">
                 <Box>
                   <Text size="sm" c="dimmed">
                     Avg. Score
                   </Text>
                   <Text size="xl" fw={700}>
-                    {(analytics?.totalAttempts || 0) > 0
-                      ? Math.round(
-                          (analytics?.totalAttempts || 0) * 0.67 * 100
-                        ) + "%"
-                      : "0%"}
-                  </Text>
-                </Box>
-                <IconMinus size={20} color="gray" />
-              </Group>
-              <Progress value={67} size="sm" mt="xs" color="yellow" />
-              <Text size="xs" c="dimmed" mt={4}>
-                No change
-              </Text>
-            </Card>
-            <Card withBorder>
-              <Group justify="space-between" align="flex-start">
-                <Box>
-                  <Text size="sm" c="dimmed">
-                    Daily Active Users
-                  </Text>
-                  <Text size="xl" fw={700}>
-                    {Math.round((analytics?.totalUsers || 0) * 0.4)}
+                    {analytics?.performanceMetrics?.avgScore || 0}%
                   </Text>
                 </Box>
                 <IconTrendingUp size={20} color="green" />
               </Group>
-              <Progress value={40} size="sm" mt="xs" color="cyan" />
-              <Text size="xs" c="dimmed" mt={4}>
-                +18% from yesterday
-              </Text>
             </Card>
 
-            <Card withBorder>
+            <Card withBorder h="100%">
               <Group justify="space-between" align="flex-start">
                 <Box>
                   <Text size="sm" c="dimmed">
-                    Completed Quizzes
+                    Completion Rate
                   </Text>
                   <Text size="xl" fw={700}>
-                    {Math.round((analytics?.totalQuizzes || 0) * 0.8)}
+                    {analytics?.performanceMetrics?.completionRate || 0}%
                   </Text>
                 </Box>
                 <IconTrendingUp size={20} color="blue" />
               </Group>
-              <Progress value={80} size="sm" mt="xs" color="indigo" />
-              <Text size="xs" c="dimmed" mt={4}>
-                +22% from last week
-              </Text>
+            </Card>
+
+            <Card withBorder h="100%">
+              <Group justify="space-between" align="flex-start">
+                <Box>
+                  <Text size="sm" c="dimmed">
+                    Platform Activity
+                  </Text>
+                  <Text size="xl" fw={700}>
+                    {analytics?.performanceMetrics?.platformActivity || 0}%
+                  </Text>
+                </Box>
+                <IconMinus size={20} color="gray" />
+              </Group>
             </Card>
           </SimpleGrid>
 

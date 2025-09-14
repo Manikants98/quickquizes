@@ -8,8 +8,8 @@ export async function GET(request: NextRequest) {
     // Get basic counts
     const [totalUsers, totalQuizzes, totalQuestions, totalAttempts] = await Promise.all([
       prisma.user.count(),
-      prisma.quiz.count(),
-      prisma.question.count(),
+      prisma.quiz.count({ where: { isActive: true } }),
+      prisma.question.count({ where: { isActive: true } }),
       prisma.quizAttempt.count(),
     ]);
 
@@ -54,6 +54,7 @@ export async function GET(request: NextRequest) {
 
     // Get questions with difficulty breakdown
     const questions = await prisma.question.findMany({
+      where: { isActive: true },
       select: {
         id: true,
         difficulty: true,
@@ -62,6 +63,7 @@ export async function GET(request: NextRequest) {
 
     // Get quizzes with counts
     const quizzes = await prisma.quiz.findMany({
+      where: { isActive: true },
       select: {
         id: true,
         title: true,

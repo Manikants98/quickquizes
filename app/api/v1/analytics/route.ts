@@ -161,6 +161,9 @@ export async function GET(request: NextRequest) {
 
     let avgScore = 0;
     let completionRate = 0;
+    let activeUsers = 0;
+    let activeUserPercentage = 0;
+    
     try {
       const avgScoreResult = await prisma.$queryRaw<{ avgScore: number }[]>`
         SELECT AVG(CAST(score AS FLOAT) / CAST(totalPoints AS FLOAT) * 100) as avgScore
@@ -181,6 +184,20 @@ export async function GET(request: NextRequest) {
       completionRate = completion?.total
         ? (Number(completion.completed) / Number(completion.total)) * 100
         : 0;
+
+      // Calculate active users (users who have activity in the last 7 days)
+      const activeUsersResult = await prisma.$queryRaw<{ activeUsers: bigint }[]>`
+        SELECT COUNT(DISTINCT userId) as activeUsers
+        FROM ActivityLog
+        WHERE createdAt >= ${sevenDaysAgo}
+      `;
+      activeUsers = Number(activeUsersResult[0]?.activeUsers || 0);
+      
+      // Calculate active user percentage
+      activeUserPercentage = stats.totalUsers > 0 
+        ? (activeUsers / stats.totalUsers) * 100 
+        : 0;
+        
     } catch (error) {
       console.error("Error calculating performance metrics:", error);
     }
@@ -206,6 +223,11 @@ export async function GET(request: NextRequest) {
               stats.totalQuestions > 0
                 ? Math.round((stats.totalAttempts / stats.totalQuestions) * 100)
                 : 0,
+          },
+          activeUsers: {
+            count: activeUsers,
+            percentage: Math.round(activeUserPercentage),
+            total: stats.totalUsers,
           },
           recentActivities: recentActivities.map((activity) => {
             return {
