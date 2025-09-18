@@ -25,8 +25,6 @@ class QuizResultPage extends StatelessWidget {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Quiz Results'),
-        backgroundColor: category.color,
-        foregroundColor: Colors.white,
         automaticallyImplyLeading: false,
       ),
       body: SingleChildScrollView(

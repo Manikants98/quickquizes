@@ -1,12 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:quickquiz/models/quiz_models.dart';
+import 'package:quickquiz/pages/categories_page.dart';
+import 'package:quickquiz/pages/profile_page.dart';
+import 'package:quickquiz/services/auth_service.dart';
+import 'package:quickquiz/services/quiz_service.dart';
+import 'package:quickquiz/widgets/app_logo.dart';
+import 'package:quickquiz/widgets/skeleton_loader.dart';
 import 'package:syncfusion_flutter_charts/charts.dart';
-
-import '../models/quiz_models.dart';
-import '../services/auth_service.dart';
-import '../services/quiz_service.dart';
-import '../widgets/skeleton_loader.dart';
-import 'categories_page.dart';
-import 'profile_page.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -53,9 +53,16 @@ class _HomePageState extends State<HomePage>
 
   @override
   void dispose() {
-    _animationController.dispose();
     _isDisposed = true;
+    _animationController.dispose();
     super.dispose();
+  }
+
+  String _getUserInitial() {
+    if (userName != null && userName!.isNotEmpty) {
+      return userName![0].toUpperCase();
+    }
+    return 'U'; // Default fallback
   }
 
   Future<void> _loadStatistics() async {
@@ -97,35 +104,43 @@ class _HomePageState extends State<HomePage>
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Quiz Dashboard'),
-        backgroundColor: Theme.of(context).colorScheme.inversePrimary,
+        title: Row(
+          children: [
+            RichText(
+              text: TextSpan(
+                style: TextStyle(fontWeight: FontWeight.w500, fontSize: 26),
+                children: [
+                  TextSpan(text: 'Q', style: TextStyle(fontSize: 32)),
+                  TextSpan(text: 'uick'),
+                  TextSpan(text: 'Q', style: TextStyle(fontSize: 32)),
+                  TextSpan(text: 'uiz'),
+                ],
+              ),
+            ),
+          ],
+        ),
         actions: [
-          IconButton(
-            onPressed: () {
+          GestureDetector(
+            onTap: () {
               Navigator.push(
                 context,
                 MaterialPageRoute(builder: (context) => const ProfilePage()),
               );
             },
-            icon: CircleAvatar(
-              radius: 16,
-              backgroundColor: Theme.of(context).colorScheme.primary,
-              child: userName != null && userName!.isNotEmpty
-                  ? Text(
-                      userName![0].toUpperCase(),
-                      style: TextStyle(
-                        color: Theme.of(context).colorScheme.onPrimary,
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    )
-                  : Icon(
-                      Icons.person,
-                      size: 18,
-                      color: Theme.of(context).colorScheme.onPrimary,
-                    ),
+            child: Container(
+              margin: const EdgeInsets.only(right: 16),
+              child: CircleAvatar(
+                backgroundColor: Theme.of(context).colorScheme.primary,
+                child: Text(
+                  _getUserInitial(),
+                  style: TextStyle(
+                    color: Theme.of(context).colorScheme.onPrimary,
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
             ),
-            tooltip: 'Profile',
           ),
         ],
       ),
@@ -339,8 +354,16 @@ class _HomePageState extends State<HomePage>
     final incorrectAnswers = totalQuestions - correctAnswers;
 
     final List<ChartData> chartData = [
-      ChartData('Correct', correctAnswers.toDouble(), Colors.green),
-      ChartData('Incorrect', incorrectAnswers.toDouble(), Colors.red),
+      ChartData(
+        'Correct',
+        correctAnswers.toDouble(),
+        Theme.of(context).colorScheme.primary,
+      ),
+      ChartData(
+        'Incorrect',
+        incorrectAnswers.toDouble(),
+        Theme.of(context).colorScheme.primary.withOpacity(0.3),
+      ),
     ];
 
     return Card(

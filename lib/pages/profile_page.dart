@@ -1,4 +1,4 @@
-import 'package:aptitude_quiz/services/auth_service.dart';
+import 'package:quickquiz/services/auth_service.dart';
 import 'package:flutter/material.dart';
 import 'package:syncfusion_flutter_charts/charts.dart';
 
@@ -172,7 +172,6 @@ class _ProfilePageState extends State<ProfilePage> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Profile'),
-        backgroundColor: Theme.of(context).colorScheme.inversePrimary,
         actions: [
           IconButton(
             icon: const Icon(Icons.palette_outlined),
@@ -243,10 +242,10 @@ class _ProfilePageState extends State<ProfilePage> {
                 (userName?.isNotEmpty == true)
                     ? userName![0].toUpperCase()
                     : 'U',
-                style: const TextStyle(
+                style: TextStyle(
                   fontSize: 32,
                   fontWeight: FontWeight.bold,
-                  color: Colors.white,
+                  color: Theme.of(context).colorScheme.onPrimary,
                 ),
               ),
             ),
@@ -266,7 +265,9 @@ class _ProfilePageState extends State<ProfilePage> {
                     userEmail ?? 'user@example.com',
                     style: Theme.of(
                       context,
-                    ).textTheme.bodyMedium?.copyWith(color: Colors.grey[600]),
+                    ).textTheme.bodyMedium?.copyWith(
+                      color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7)
+                    ),
                   ),
                   const SizedBox(height: 8),
                   Container(
@@ -275,13 +276,13 @@ class _ProfilePageState extends State<ProfilePage> {
                       vertical: 4,
                     ),
                     decoration: BoxDecoration(
-                      color: _getUserLevelColor(),
+                      color: Theme.of(context).colorScheme.primary,
                       borderRadius: BorderRadius.circular(12),
                     ),
                     child: Text(
                       _getUserLevel(),
-                      style: const TextStyle(
-                        color: Colors.white,
+                      style: TextStyle(
+                        color: Theme.of(context).colorScheme.onPrimary,
                         fontWeight: FontWeight.bold,
                         fontSize: 12,
                       ),
@@ -365,29 +366,33 @@ class _ProfilePageState extends State<ProfilePage> {
     IconData icon,
     Color color,
   ) {
+    final primaryColor = Theme.of(context).colorScheme.primary;
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.1),
+        color: primaryColor.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: color.withValues(alpha: 0.3)),
+        border: Border.all(color: Theme.of(context).colorScheme.primary),
       ),
       child: Column(
         children: [
-          Icon(icon, color: color, size: 24),
+          Icon(icon, color: primaryColor, size: 24),
           const SizedBox(height: 8),
           Text(
             value,
             style: TextStyle(
               fontSize: 18,
               fontWeight: FontWeight.bold,
-              color: color,
+              color: primaryColor,
             ),
           ),
           const SizedBox(height: 4),
           Text(
             title,
-            style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+            style: TextStyle(
+              fontSize: 12, 
+              color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7)
+            ),
             textAlign: TextAlign.center,
           ),
         ],
@@ -649,21 +654,6 @@ class _ProfilePageState extends State<ProfilePage> {
     return 'New User';
   }
 
-  Color _getUserLevelColor() {
-    final level = _getUserLevel();
-    switch (level) {
-      case 'Expert':
-        return Colors.purple;
-      case 'Advanced':
-        return Colors.orange;
-      case 'Intermediate':
-        return Colors.blue;
-      case 'Beginner':
-        return Colors.green;
-      default:
-        return Colors.grey;
-    }
-  }
 
   Widget _buildProfileSkeleton() {
     return SingleChildScrollView(

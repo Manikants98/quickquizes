@@ -87,8 +87,7 @@ class _CategoriesState extends State<Categories> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Quiz Categories'),
-        backgroundColor: Theme.of(context).colorScheme.inversePrimary,
+        title: const Text('Categories'),
       ),
       body: isLoading
           ? _buildCategoriesSkeleton()
@@ -154,7 +153,7 @@ class _CategoriesState extends State<Categories> {
                   color: category.color.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(12),
                 ),
-                child: Icon(category.icon, size: 30, color: category.color),
+                child: Icon(category.icon, size: 30, color: Theme.of(context).colorScheme.primary),
               ),
               const SizedBox(width: 16),
 
@@ -182,7 +181,7 @@ class _CategoriesState extends State<Categories> {
                     // Quiz Info
                     Row(
                       children: [
-                        Icon(Icons.quiz, size: 16, color: Colors.blue[600]),
+                        Icon(Icons.quiz, size: 16, color: Theme.of(context).colorScheme.primary),
                         const SizedBox(width: 4),
                         Text(
                           '${category.questionCount ?? 0} questions',
@@ -216,7 +215,7 @@ class _CategoriesState extends State<Categories> {
                     if (hasAttempted) ...[
                       Row(
                         children: [
-                          Icon(Icons.star, size: 16, color: Colors.amber[600]),
+                          Icon(Icons.star, size: 16, color: Theme.of(context).colorScheme.primary),
                           const SizedBox(width: 4),
                           Text(
                             'Best: $bestScore/$totalQuestions ($percentage%)',
@@ -253,7 +252,7 @@ class _CategoriesState extends State<Categories> {
               ),
 
               // Arrow Icon
-              Icon(Icons.arrow_forward_ios, size: 16, color: Colors.grey[400]),
+              Icon(Icons.arrow_forward_ios, size: 16, color: Theme.of(context).colorScheme.primary),
             ],
           ),
         ),

@@ -349,21 +349,6 @@ class _QuizDetailPageState extends State<QuizDetailPage> {
       return Scaffold(
         appBar: AppBar(
           title: Text(widget.category.name),
-          backgroundColor: widget.category.color,
-          foregroundColor: Colors.white,
-          actions: [
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Icon(Icons.timer, color: Colors.white),
-                  const SizedBox(width: 4),
-                  SkeletonText(width: 60, height: 16),
-                ],
-              ),
-            ),
-          ],
         ),
         body: _buildQuizDetailSkeleton(),
       );
@@ -372,7 +357,9 @@ class _QuizDetailPageState extends State<QuizDetailPage> {
     // Show error state
     if (errorMessage != null) {
       return Scaffold(
-        appBar: AppBar(title: Text(widget.category.name)),
+        appBar: AppBar(
+          title: Text(widget.category.name),
+        ),
         body: Center(
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
@@ -398,7 +385,9 @@ class _QuizDetailPageState extends State<QuizDetailPage> {
     // Check if questions list is empty
     if (questions.isEmpty) {
       return Scaffold(
-        appBar: AppBar(title: Text(widget.category.name)),
+        appBar: AppBar(
+          title: Text(widget.category.name),
+        ),
         body: const Center(
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
@@ -431,22 +420,20 @@ class _QuizDetailPageState extends State<QuizDetailPage> {
       appBar: AppBar(
         title: Text(widget.category.name),
         titleSpacing: 0,
-        backgroundColor: widget.category.color,
-        foregroundColor: Colors.white,
         actions: [
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
             child: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
-                Icon(Icons.timer, color: Colors.white),
+                Icon(Icons.timer, color: Theme.of(context).colorScheme.onPrimary),
                 const SizedBox(width: 4),
                 Text(
                   _formatTime(timeRemaining),
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 16,
                     fontWeight: FontWeight.bold,
-                    color: Colors.white,
+                    color: Theme.of(context).colorScheme.onPrimary,
                   ),
                 ),
               ],
@@ -471,7 +458,7 @@ class _QuizDetailPageState extends State<QuizDetailPage> {
                     Text(
                       '${(progress * 100).round()}% Complete',
                       style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                        color: widget.category.color,
+                        color: Theme.of(context).colorScheme.primary,
                         fontWeight: FontWeight.bold,
                       ),
                     ),
@@ -480,11 +467,9 @@ class _QuizDetailPageState extends State<QuizDetailPage> {
                 const SizedBox(height: 8),
                 LinearProgressIndicator(
                   value: progress,
-                  backgroundColor: Theme.of(
-                    context,
-                  ).colorScheme.surfaceContainerHighest,
+                  backgroundColor: Theme.of(context).colorScheme.outline.withOpacity(0.2),
                   valueColor: AlwaysStoppedAnimation<Color>(
-                    widget.category.color,
+                    Theme.of(context).colorScheme.primary,
                   ),
                 ),
               ],
