@@ -1,10 +1,10 @@
-import 'package:aptitude_quiz/services/auth_service.dart';
 import 'package:flutter/material.dart';
 import 'package:syncfusion_flutter_charts/charts.dart';
 
 import '../models/quiz_models.dart';
+import '../services/auth_service.dart';
 import '../services/quiz_service.dart';
-import 'auth_page.dart';
+import '../widgets/skeleton_loader.dart';
 import 'categories_page.dart';
 import 'profile_page.dart';
 
@@ -23,6 +23,7 @@ class _HomePageState extends State<HomePage>
   bool isLoading = true;
   bool _isDisposed = false;
   late AnimationController _animationController;
+  String? userName;
 
   @override
   void initState() {
@@ -44,6 +45,7 @@ class _HomePageState extends State<HomePage>
   Future<void> _loadStatistics() async {
     try {
       final loadedCategories = await QuizService.getCategories();
+      final name = await AuthService.getUserName();
 
       final stats = await QuizService.getOverallStats();
       final catStats = <String, Map<String, dynamic>>{};
@@ -53,16 +55,12 @@ class _HomePageState extends State<HomePage>
       }
 
       if (mounted && !_isDisposed) {
-        // Add a small delay to ensure the widget is still mounted when setState is called
-        Future.delayed(Duration.zero, () {
-          if (mounted && !_isDisposed) {
-            setState(() {
-              categories = loadedCategories;
-              overallStats = stats;
-              categoryStats = catStats;
-              isLoading = false;
-            });
-          }
+        setState(() {
+          overallStats = stats;
+          categoryStats = catStats;
+          categories = loadedCategories;
+          userName = name;
+          isLoading = false;
         });
       }
     } catch (e) {
@@ -84,9 +82,7 @@ class _HomePageState extends State<HomePage>
     return Scaffold(
       appBar: AppBar(
         title: const Text('Quiz Dashboard'),
-        backgroundColor: Theme.of(context).colorScheme.primary,
-        foregroundColor: Colors.white,
-        elevation: 0,
+        backgroundColor: Theme.of(context).colorScheme.inversePrimary,
         actions: [
           IconButton(
             onPressed: () {
@@ -95,30 +91,26 @@ class _HomePageState extends State<HomePage>
                 MaterialPageRoute(builder: (context) => const ProfilePage()),
               );
             },
-            icon: const Icon(Icons.person),
+            icon: CircleAvatar(
+              radius: 16,
+              backgroundColor: Theme.of(context).colorScheme.primary,
+              child: userName != null && userName!.isNotEmpty
+                  ? Text(
+                      userName![0].toUpperCase(),
+                      style: TextStyle(
+                        color: Theme.of(context).colorScheme.onPrimary,
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    )
+                  : Icon(Icons.person, size: 18, color: Theme.of(context).colorScheme.onPrimary),
+            ),
             tooltip: 'Profile',
-          ),
-          IconButton(
-            onPressed: () => _loadStatistics(),
-            icon: const Icon(Icons.refresh),
-            tooltip: 'Refresh Statistics',
-          ),
-          IconButton(
-            onPressed: () async {
-              await AuthService.logout();
-              if (!mounted) return;
-              Navigator.pushReplacement(
-                context,
-                MaterialPageRoute(builder: (context) => const AuthPage()),
-              );
-            },
-            icon: const Icon(Icons.logout),
-            tooltip: 'Logout',
           ),
         ],
       ),
       body: isLoading
-          ? const Center(child: CircularProgressIndicator())
+          ? _buildSkeletonLoader()
           : (overallStats['totalQuizzesAttempted'] ?? 0) == 0
           ? _buildEmptyState()
           : _buildDashboard(),
@@ -729,6 +721,117 @@ class _HomePageState extends State<HomePage>
             ),
     );
     return category.name;
+  }
+
+  Widget _buildSkeletonLoader() {
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Stats cards skeleton
+          Row(
+            children: [
+              Expanded(
+                child: Card(
+                  child: Padding(
+                    padding: const EdgeInsets.all(16),
+                    child: Column(
+                      children: [
+                        SkeletonLoader(
+                          width: 40,
+                          height: 40,
+                          borderRadius: BorderRadius.circular(20),
+                        ),
+                        const SizedBox(height: 8),
+                        const SkeletonText(width: 60, height: 24),
+                        const SizedBox(height: 4),
+                        const SkeletonText(width: 80, height: 14),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Card(
+                  child: Padding(
+                    padding: const EdgeInsets.all(16),
+                    child: Column(
+                      children: [
+                        SkeletonLoader(
+                          width: 40,
+                          height: 40,
+                          borderRadius: BorderRadius.circular(20),
+                        ),
+                        const SizedBox(height: 8),
+                        const SkeletonText(width: 60, height: 24),
+                        const SizedBox(height: 4),
+                        const SkeletonText(width: 80, height: 14),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          
+          // Chart skeleton
+          Card(
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const SkeletonText(width: 150, height: 18),
+                  const SizedBox(height: 16),
+                  SkeletonLoader(
+                    width: double.infinity,
+                    height: 200,
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          const SizedBox(height: 16),
+          
+          // Recent activities skeleton
+          Card(
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const SkeletonText(width: 120, height: 18),
+                  const SizedBox(height: 16),
+                  ...List.generate(3, (index) => Padding(
+                    padding: const EdgeInsets.only(bottom: 12),
+                    child: Row(
+                      children: [
+                        SkeletonAvatar(size: 32),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              SkeletonText(width: double.infinity, height: 14),
+                              const SizedBox(height: 4),
+                              SkeletonText(width: 100, height: 12),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  )),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
   }
 
   String _formatDate(dynamic dateInput) {

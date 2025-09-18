@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import '../models/quiz_models.dart';
 import '../services/quiz_service.dart';
+import '../services/api_service.dart';
+import '../widgets/skeleton_loader.dart';
 import 'quiz_detail_page.dart';
 
 class Categories extends StatefulWidget {
@@ -23,7 +25,7 @@ class _CategoriesState extends State<Categories> {
 
   Future<void> _loadCategories() async {
     try {
-      final loadedCategories = await QuizService.getCategories();
+      final loadedCategories = await ApiService.getCategories();
       final stats = <String, Map<String, dynamic>>{};
 
       for (final category in loadedCategories) {
@@ -57,7 +59,7 @@ class _CategoriesState extends State<Categories> {
         backgroundColor: Theme.of(context).colorScheme.inversePrimary,
       ),
       body: isLoading
-          ? const Center(child: CircularProgressIndicator())
+          ? _buildCategoriesSkeleton()
           : categories.isEmpty
           ? const Center(
               child: Column(
@@ -145,7 +147,40 @@ class _CategoriesState extends State<Categories> {
                     ),
                     const SizedBox(height: 8),
 
-                    // Progress/Stats
+                    // Quiz Info
+                    Row(
+                      children: [
+                        Icon(Icons.quiz, size: 16, color: Colors.blue[600]),
+                        const SizedBox(width: 4),
+                        Text(
+                          '${category.questionCount ?? 0} questions',
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: Colors.grey[700],
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        if (category.timeLimit != null) ...[
+                          Icon(
+                            Icons.timer,
+                            size: 16,
+                            color: Colors.orange[600],
+                          ),
+                          const SizedBox(width: 4),
+                          Text(
+                            '${category.timeLimit} min',
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: Colors.grey[700],
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                        ],
+                      ],
+                    ),
+                    const SizedBox(height: 4),
+
                     if (hasAttempted) ...[
                       Row(
                         children: [
@@ -191,6 +226,72 @@ class _CategoriesState extends State<Categories> {
           ),
         ),
       ),
+    );
+  }
+
+  Widget _buildCategoriesSkeleton() {
+    return ListView.builder(
+      padding: const EdgeInsets.all(16),
+      itemCount: 6,
+      itemBuilder: (context, index) {
+        return Card(
+          margin: const EdgeInsets.only(bottom: 12),
+          elevation: 2,
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Row(
+              children: [
+                // Category Icon Skeleton
+                SkeletonAvatar(size: 60),
+                const SizedBox(width: 16),
+
+                // Category Info Skeleton
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // Title skeleton
+                      SkeletonText(width: 150, height: 18),
+                      const SizedBox(height: 4),
+                      
+                      // Description skeleton
+                      SkeletonText(width: double.infinity, height: 14),
+                      const SizedBox(height: 2),
+                      SkeletonText(width: 200, height: 14),
+                      const SizedBox(height: 8),
+
+                      // Quiz info row skeleton
+                      Row(
+                        children: [
+                          SkeletonAvatar(size: 16),
+                          const SizedBox(width: 4),
+                          SkeletonText(width: 80, height: 12),
+                          const SizedBox(width: 12),
+                          SkeletonAvatar(size: 16),
+                          const SizedBox(width: 4),
+                          SkeletonText(width: 50, height: 12),
+                        ],
+                      ),
+                      const SizedBox(height: 4),
+
+                      // Best score row skeleton (sometimes visible)
+                      if (index % 3 == 0) ...[
+                        Row(
+                          children: [
+                            SkeletonAvatar(size: 16),
+                            const SizedBox(width: 4),
+                            SkeletonText(width: 60, height: 12),
+                          ],
+                        ),
+                      ],
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
     );
   }
 }

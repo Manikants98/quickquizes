@@ -2,6 +2,8 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import '../models/quiz_models.dart';
 import '../services/storage_service.dart';
+import '../services/api_service.dart';
+import '../widgets/skeleton_loader.dart';
 import 'quiz_result_page.dart';
 
 class QuizDetailPage extends StatefulWidget {
@@ -20,21 +22,70 @@ class _QuizDetailPageState extends State<QuizDetailPage> {
   int timeRemaining = 1800; // 30 minutes in seconds
   bool isQuizCompleted = false;
   QuizSession? currentSession;
+  List<Question> questions = [];
+  bool isLoadingQuestions = true;
+  String? errorMessage;
 
   @override
   void initState() {
     super.initState();
-    _initializeQuiz();
+    _loadQuizQuestions();
+  }
+
+  Future<void> _loadQuizQuestions() async {
+    try {
+      setState(() {
+        isLoadingQuestions = true;
+        errorMessage = null;
+      });
+
+      // First try to get questions from the category (if already loaded)
+      if (widget.category.questions.isNotEmpty) {
+        questions = widget.category.questions;
+      } else {
+        // Fetch questions from API
+        questions = await ApiService.getAllQuizQuestions(widget.category.id);
+      }
+
+      if (questions.isEmpty) {
+        setState(() {
+          errorMessage = 'No questions found for this quiz';
+          isLoadingQuestions = false;
+        });
+        return;
+      }
+
+      // Sort questions by order if available
+      questions.sort((a, b) {
+        if (a.order != null && b.order != null) {
+          return a.order!.compareTo(b.order!);
+        }
+        return 0;
+      });
+
+      setState(() {
+        isLoadingQuestions = false;
+      });
+
+      _initializeQuiz();
+    } catch (e) {
+      setState(() {
+        errorMessage = 'Failed to load quiz questions: $e';
+        isLoadingQuestions = false;
+      });
+    }
   }
 
   void _initializeQuiz() async {
     // Initialize user answers list
-    userAnswers = List.filled(widget.category.questions.length, -1);
+    userAnswers = List.filled(questions.length, -1);
+
+    // Set time limit from quiz data or default
+    final quizTimeLimit = widget.category.timeLimit ?? 30;
+    timeRemaining = quizTimeLimit * 60; // Convert minutes to seconds
 
     // Try to load existing session
-    currentSession = await StorageService.getQuizSession(
-      widget.category.id,
-    );
+    currentSession = await StorageService.getQuizSession(widget.category.id);
 
     if (currentSession != null && !currentSession!.isCompleted) {
       setState(() {
@@ -43,7 +94,10 @@ class _QuizDetailPageState extends State<QuizDetailPage> {
         final elapsed = DateTime.now()
             .difference(currentSession!.startTime)
             .inSeconds;
-        timeRemaining = (1800 - elapsed).clamp(0, 1800);
+        timeRemaining = (quizTimeLimit * 60 - elapsed).clamp(
+          0,
+          quizTimeLimit * 60,
+        );
       });
     }
 
@@ -84,7 +138,7 @@ class _QuizDetailPageState extends State<QuizDetailPage> {
   int _calculateScore() {
     int score = 0;
     for (int i = 0; i < userAnswers.length; i++) {
-      if (userAnswers[i] == widget.category.questions[i].correctAnswer) {
+      if (userAnswers[i] == questions[i].correctAnswer) {
         score++;
       }
     }
@@ -99,7 +153,7 @@ class _QuizDetailPageState extends State<QuizDetailPage> {
   }
 
   void _nextQuestion() {
-    if (currentQuestionIndex < widget.category.questions.length - 1) {
+    if (currentQuestionIndex < questions.length - 1) {
       setState(() {
         currentQuestionIndex++;
       });
@@ -120,11 +174,32 @@ class _QuizDetailPageState extends State<QuizDetailPage> {
     _timer?.cancel();
 
     final score = _calculateScore();
-    await StorageService.saveScore(
-      widget.category.id,
-      score,
-      widget.category.questions.length,
-    );
+    final timeSpent = (widget.category.timeLimit ?? 30) * 60 - timeRemaining; // Calculate time spent in seconds
+    
+    // Save score locally
+    await StorageService.saveScore(widget.category.id, score, questions.length);
+    
+    // Save score to backend
+    try {
+      print('🎯 Attempting to save score to backend:');
+      print('Category ID: ${widget.category.id}');
+      print('Score: $score');
+      print('Total Questions: ${questions.length}');
+      print('Time Spent: ${timeSpent ~/ 60} minutes');
+      
+      await ApiService.saveQuizScore(
+        widget.category.id,
+        score,
+        questions.length,
+        (score / questions.length * 100).round(),
+        timeSpent ~/ 60, // Convert to minutes
+      );
+      
+      print('✅ Score saved to backend successfully');
+    } catch (e) {
+      print('❌ Failed to save score to backend: $e');
+      // Continue with local storage even if backend fails
+    }
 
     await StorageService.clearQuizSession(widget.category.id);
 
@@ -133,7 +208,7 @@ class _QuizDetailPageState extends State<QuizDetailPage> {
         context,
         MaterialPageRoute(
           builder: (context) => QuizResultPage(
-            category: widget.category,
+            category: widget.category.copyWith(questions: questions),
             userAnswers: userAnswers,
             score: score,
           ),
@@ -148,23 +223,187 @@ class _QuizDetailPageState extends State<QuizDetailPage> {
     return '${minutes.toString().padLeft(2, '0')}:${remainingSeconds.toString().padLeft(2, '0')}';
   }
 
+  Widget _buildQuizDetailSkeleton() {
+    return Column(
+      children: [
+        // Progress bar skeleton
+        Container(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  SkeletonText(width: 120, height: 16),
+                  SkeletonText(width: 100, height: 16),
+                ],
+              ),
+              const SizedBox(height: 8),
+              SkeletonLoader(
+                width: double.infinity,
+                height: 4,
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ],
+          ),
+        ),
+
+        // Question card skeleton
+        Expanded(
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Question card
+                Card(
+                  elevation: 2,
+                  child: Padding(
+                    padding: const EdgeInsets.all(20),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        // Question number and difficulty
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            SkeletonText(width: 80, height: 14),
+                            SkeletonLoader(
+                              width: 60,
+                              height: 20,
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 16),
+                        
+                        // Question text
+                        SkeletonText(width: double.infinity, height: 18),
+                        const SizedBox(height: 8),
+                        SkeletonText(width: 280, height: 18),
+                        const SizedBox(height: 8),
+                        SkeletonText(width: 200, height: 18),
+                        const SizedBox(height: 24),
+                        
+                        // Answer options
+                        ...List.generate(4, (index) => Container(
+                          margin: const EdgeInsets.only(bottom: 12),
+                          child: Card(
+                            elevation: 1,
+                            child: Padding(
+                              padding: const EdgeInsets.all(16),
+                              child: Row(
+                                children: [
+                                  SkeletonAvatar(size: 20),
+                                  const SizedBox(width: 12),
+                                  Expanded(
+                                    child: SkeletonText(
+                                      width: double.infinity, 
+                                      height: 16,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        )),
+                      ],
+                    ),
+                  ),
+                ),
+                
+                const SizedBox(height: 24),
+                
+                // Navigation buttons skeleton
+                Row(
+                  children: [
+                    Expanded(
+                      child: SkeletonLoader(
+                        width: double.infinity,
+                        height: 48,
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                    ),
+                    const SizedBox(width: 16),
+                    Expanded(
+                      child: SkeletonLoader(
+                        width: double.infinity,
+                        height: 48,
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
-    // Check if questions list is empty
-    if (widget.category.questions.isEmpty) {
+    // Show loading state
+    if (isLoadingQuestions) {
       return Scaffold(
         appBar: AppBar(
           title: Text(widget.category.name),
+          backgroundColor: widget.category.color,
+          foregroundColor: Colors.white,
+          actions: [
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(Icons.timer, color: Colors.white),
+                  const SizedBox(width: 4),
+                  SkeletonText(width: 60, height: 16),
+                ],
+              ),
+            ),
+          ],
         ),
+        body: _buildQuizDetailSkeleton(),
+      );
+    }
+
+    // Show error state
+    if (errorMessage != null) {
+      return Scaffold(
+        appBar: AppBar(title: Text(widget.category.name)),
+        body: Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const Icon(Icons.error_outline, size: 64, color: Colors.red),
+              const SizedBox(height: 16),
+              Text(
+                errorMessage!,
+                style: const TextStyle(fontSize: 16, color: Colors.red),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 16),
+              ElevatedButton(
+                onPressed: _loadQuizQuestions,
+                child: const Text('Retry'),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
+    // Check if questions list is empty
+    if (questions.isEmpty) {
+      return Scaffold(
+        appBar: AppBar(title: Text(widget.category.name)),
         body: const Center(
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Icon(
-                Icons.quiz_outlined,
-                size: 64,
-                color: Colors.grey,
-              ),
+              Icon(Icons.quiz_outlined, size: 64, color: Colors.grey),
               SizedBox(height: 16),
               Text(
                 'No questions available',
@@ -176,11 +415,8 @@ class _QuizDetailPageState extends State<QuizDetailPage> {
               ),
               SizedBox(height: 8),
               Text(
-                'This category doesn\'t have any questions yet.',
-                style: TextStyle(
-                  fontSize: 14,
-                  color: Colors.grey,
-                ),
+                'This quiz doesn\'t have any questions yet.',
+                style: TextStyle(fontSize: 14, color: Colors.grey),
               ),
             ],
           ),
@@ -188,9 +424,8 @@ class _QuizDetailPageState extends State<QuizDetailPage> {
       );
     }
 
-    final question = widget.category.questions[currentQuestionIndex];
-    final progress =
-        (currentQuestionIndex + 1) / widget.category.questions.length;
+    final question = questions[currentQuestionIndex];
+    final progress = (currentQuestionIndex + 1) / questions.length;
 
     return Scaffold(
       appBar: AppBar(
@@ -230,7 +465,7 @@ class _QuizDetailPageState extends State<QuizDetailPage> {
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     Text(
-                      'Question ${currentQuestionIndex + 1} of ${widget.category.questions.length}',
+                      'Question ${currentQuestionIndex + 1} of ${questions.length}',
                       style: Theme.of(context).textTheme.titleMedium,
                     ),
                     Text(
@@ -256,7 +491,6 @@ class _QuizDetailPageState extends State<QuizDetailPage> {
             ),
           ),
 
-          // Question content
           Expanded(
             child: Padding(
               padding: const EdgeInsets.all(16),
@@ -417,20 +651,16 @@ class _QuizDetailPageState extends State<QuizDetailPage> {
 
                 Expanded(
                   child: ElevatedButton.icon(
-                    onPressed:
-                        currentQuestionIndex <
-                            widget.category.questions.length - 1
+                    onPressed: currentQuestionIndex < questions.length - 1
                         ? _nextQuestion
                         : _submitQuiz,
                     icon: Icon(
-                      currentQuestionIndex <
-                              widget.category.questions.length - 1
+                      currentQuestionIndex < questions.length - 1
                           ? Icons.arrow_forward
                           : Icons.check,
                     ),
                     label: Text(
-                      currentQuestionIndex <
-                              widget.category.questions.length - 1
+                      currentQuestionIndex < questions.length - 1
                           ? 'Next'
                           : 'Submit Quiz',
                     ),

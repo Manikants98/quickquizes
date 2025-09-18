@@ -17,7 +17,9 @@ class QuizResultPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final percentage = (score / category.questions.length * 100).round();
+    final percentage = category.questions.isNotEmpty
+        ? (score / category.questions.length * 100).round()
+        : 0;
     final isGoodScore = percentage >= 70;
 
     return Scaffold(
@@ -75,7 +77,7 @@ class QuizResultPage extends StatelessWidget {
                     ),
                     const SizedBox(height: 8),
                     Text(
-                      '$score out of ${category.questions.length}',
+                      '$score out of ${category.questions.isNotEmpty ? category.questions.length : 0}',
                       style: Theme.of(
                         context,
                       ).textTheme.titleLarge?.copyWith(color: Colors.white),
@@ -96,7 +98,6 @@ class QuizResultPage extends StatelessWidget {
 
             const SizedBox(height: 24),
 
-            // Performance breakdown
             Card(
               elevation: Theme.of(context).brightness == Brightness.dark
                   ? 4
@@ -134,7 +135,10 @@ class QuizResultPage extends StatelessWidget {
                           child: _buildStatCard(
                             context,
                             'Incorrect',
-                            (category.questions.length - score).toString(),
+                            (category.questions.isNotEmpty
+                                    ? (category.questions.length - score)
+                                    : 0)
+                                .toString(),
                             Colors.red,
                             Icons.cancel,
                           ),
@@ -158,7 +162,6 @@ class QuizResultPage extends StatelessWidget {
 
             const SizedBox(height: 16),
 
-            // Review answers button
             SizedBox(
               height: 160,
               child: Card(
@@ -333,13 +336,17 @@ class QuizResultPage extends StatelessWidget {
             ),
             // Content
             Expanded(
-              child: ListView.builder(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 20,
-                  vertical: 8,
-                ),
-                itemCount: category.questions.length,
-                itemBuilder: (context, index) {
+              child: category.questions.isEmpty 
+                ? const Center(
+                    child: Text('No questions available for review'),
+                  )
+                : ListView.builder(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 20,
+                      vertical: 8,
+                    ),
+                    itemCount: category.questions.length,
+                    itemBuilder: (context, index) {
                   final question = category.questions[index];
                   final userAnswer = userAnswers[index];
                   final correctAnswer = question.correctAnswer;
@@ -508,8 +515,8 @@ class QuizResultPage extends StatelessWidget {
                       ),
                     ),
                   );
-                },
-              ),
+                    },
+                  ),
             ),
           ],
         ),

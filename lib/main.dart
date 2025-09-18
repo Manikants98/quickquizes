@@ -115,7 +115,7 @@ class _AuthCheckPageState extends State<AuthCheckPage> {
 
   Future<void> _checkAuthStatus() async {
     // Show splash for a moment
-    await Future.delayed(const Duration(seconds: 1));
+    await Future.delayed(const Duration(seconds: 5));
 
     final isLoggedIn = await AuthService.isLoggedIn();
 
@@ -135,49 +135,86 @@ class _AuthCheckPageState extends State<AuthCheckPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: Container(
-        width: double.infinity,
-        height: double.infinity,
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-            colors: [
-              Theme.of(context).colorScheme.primary,
-              Theme.of(context).colorScheme.primaryContainer,
+      backgroundColor: Theme.of(context).colorScheme.surface,
+      body: SafeArea(
+        child: Container(
+          width: double.infinity,
+          height: double.infinity,
+          padding: const EdgeInsets.all(32),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              // App Icon with background
+              Container(
+                width: 120,
+                height: 120,
+                decoration: BoxDecoration(
+                  color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(24),
+                  border: Border.all(
+                    color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.2),
+                    width: 2,
+                  ),
+                ),
+                child: Icon(
+                  Icons.quiz,
+                  size: 64,
+                  color: Theme.of(context).colorScheme.primary,
+                ),
+              ),
+              const SizedBox(height: 32),
+              
+              // App Title
+              Text(
+                'QuickQuiz',
+                style: Theme.of(context).textTheme.displaySmall?.copyWith(
+                  fontWeight: FontWeight.bold,
+                  color: Theme.of(context).colorScheme.onSurface,
+                ),
+              ),
+              const SizedBox(height: 8),
+              
+              // Subtitle
+              Text(
+                'Test Your Knowledge',
+                style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                  color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+              const SizedBox(height: 48),
+              
+              // Loading indicator with modern styling
+              Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: Theme.of(context).colorScheme.surfaceContainerHighest,
+                  borderRadius: BorderRadius.circular(16),
+                ),
+                child: Column(
+                  children: [
+                    SizedBox(
+                      width: 32,
+                      height: 32,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 3,
+                        color: Theme.of(context).colorScheme.primary,
+                        backgroundColor: Theme.of(context).colorScheme.primary.withValues(alpha: 0.2),
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    Text(
+                      'Loading...',
+                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                        color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
             ],
           ),
-        ),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(
-              Icons.quiz_outlined,
-              size: 120,
-              color: Theme.of(context).colorScheme.onPrimary,
-            ),
-            const SizedBox(height: 24),
-            Text(
-              'Aptitude Quiz',
-              style: Theme.of(context).textTheme.displayMedium?.copyWith(
-                fontWeight: FontWeight.bold,
-                color: Theme.of(context).colorScheme.onPrimary,
-              ),
-            ),
-            const SizedBox(height: 16),
-            Text(
-              'Challenge Your Mind',
-              style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                color: Theme.of(
-                  context,
-                ).colorScheme.onPrimary.withValues(alpha: 0.8),
-              ),
-            ),
-            const SizedBox(height: 48),
-            CircularProgressIndicator(
-              color: Theme.of(context).colorScheme.onPrimary,
-            ),
-          ],
         ),
       ),
     );

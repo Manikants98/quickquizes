@@ -1,6 +1,8 @@
 import 'dart:io';
+
 import 'package:dio/dio.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+
 import '../models/quiz_models.dart';
 
 class ApiService {
@@ -8,13 +10,13 @@ class ApiService {
   static String get baseUrl {
     if (Platform.isAndroid) {
       // Android emulator uses 10.0.2.2 to access host machine's localhost
-      return 'http://10.0.2.2:3000/api';
+      return 'http://10.0.2.2:3001/api/v1';
     } else if (Platform.isIOS) {
       // iOS simulator can use localhost directly
-      return 'http://localhost:3000/api';
+      return 'http://localhost:3001/api/v1';
     } else {
       // Default fallback
-      return 'http://localhost:3000/api';
+      return 'http://localhost:3001/api/v1';
     }
   }
 
@@ -41,7 +43,48 @@ class ApiService {
           if (token != null && token.isNotEmpty) {
             options.headers['Authorization'] = 'Bearer $token';
           }
+
+          // Log request details
+          print('🚀 API REQUEST:');
+          print('Method: ${options.method}');
+          print('URL: ${options.baseUrl}${options.path}');
+          print('Headers: ${options.headers}');
+          if (options.queryParameters.isNotEmpty) {
+            print('Query Parameters: ${options.queryParameters}');
+          }
+          if (options.data != null) {
+            print('Request Payload: ${options.data}');
+          }
+          print('---');
+
           handler.next(options);
+        },
+        onResponse: (response, handler) {
+          // Log response details
+          print('✅ API RESPONSE:');
+          print('Status Code: ${response.statusCode}');
+          print(
+            'URL: ${response.requestOptions.baseUrl}${response.requestOptions.path}',
+          );
+          print('Response Data: ${response.data}');
+          print('---');
+
+          handler.next(response);
+        },
+        onError: (error, handler) {
+          // Log error details
+          print('❌ API ERROR:');
+          print('Status Code: ${error.response?.statusCode}');
+          print(
+            'URL: ${error.requestOptions.baseUrl}${error.requestOptions.path}',
+          );
+          print('Error Message: ${error.message}');
+          if (error.response?.data != null) {
+            print('Error Response: ${error.response?.data}');
+          }
+          print('---');
+
+          handler.next(error);
         },
       ),
     );
@@ -55,7 +98,7 @@ class ApiService {
     try {
       await _addAuthInterceptor();
       final response = await _dio.post(
-        '/auth/signin',
+        '/auth/login',
         data: {'email': email, 'password': password},
       );
       print("Login response received $response");
@@ -77,10 +120,10 @@ class ApiService {
     try {
       await _addAuthInterceptor();
       final response = await _dio.post(
-        '/auth/signup',
+        '/auth/register',
         data: {'email': email, 'password': password, 'name': name},
       );
-      if (response.statusCode == 201) {
+      if (response.statusCode == 200) {
         return response.data;
       }
       return null;
@@ -93,11 +136,26 @@ class ApiService {
   static Future<List<QuizCategory>> getCategories() async {
     try {
       await _addAuthInterceptor();
-      final response = await _dio.get('/categories');
+      final response = await _dio.get('/quizzes');
 
       if (response.statusCode == 200) {
-        final List<dynamic> data = response.data;
-        return data.map((json) => QuizCategory.fromApi(json)).toList();
+        final Map<String, dynamic> data = response.data;
+        final List<dynamic> quizzes = data['quizzes'] ?? [];
+
+        return quizzes
+            .map(
+              (quiz) => QuizCategory.fromApi({
+                'id': quiz['id'],
+                'title': quiz['title'],
+                'description': quiz['description'] ?? '',
+                'questionCount': quiz['questionCount'] ?? 0,
+                'timeLimit': quiz['timeLimit'],
+                'attemptCount': quiz['attemptCount'] ?? 0,
+                'createdAt': quiz['createdAt'],
+                'createdBy': quiz['createdBy'],
+              }),
+            )
+            .toList();
       }
       return [];
     } catch (e) {
@@ -254,6 +312,137 @@ class ApiService {
     } catch (e) {
       print('Get overall stats error: $e');
       return {};
+    }
+  }
+
+  static Future<Map<String, dynamic>> getDashboardStats() async {
+    await _addAuthInterceptor();
+
+    try {
+      final response = await _dio.get('/analytics');
+
+      print('Response Data: ${response.data}');
+      print('---');
+
+      if (response.statusCode == 200 && response.data['success'] == true) {
+        return response.data['data'];
+      } else {
+        throw Exception('Failed to fetch dashboard stats');
+      }
+    } catch (e) {
+      print('Error fetching dashboard stats: $e');
+      throw Exception('Failed to fetch dashboard stats: $e');
+    }
+  }
+
+  static Future<void> saveQuizScore(
+    String categoryId,
+    int score,
+    int totalQuestions,
+    int percentage,
+    int timeSpentMinutes,
+  ) async {
+    await _addAuthInterceptor();
+
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final userId = prefs.getString('user_id');
+      
+      if (userId == null) {
+        throw Exception('User ID not found');
+      }
+
+      final response = await _dio.post('/scores', data: {
+        'userId': userId,
+        'categoryId': categoryId,
+        'score': score,
+        'totalQuestions': totalQuestions,
+        'percentage': percentage,
+        'timeSpent': timeSpentMinutes,
+      });
+
+      if (response.statusCode != 200 || response.data['success'] != true) {
+        throw Exception('Failed to save score to backend');
+      }
+    } catch (e) {
+      print('Error saving score: $e');
+      throw Exception('Failed to save score: $e');
+    }
+  }
+
+  // Quiz Detail APIs
+  static Future<Map<String, dynamic>?> getQuizDetail(String quizId) async {
+    try {
+      await _addAuthInterceptor();
+      final response = await _dio.get('/quizzes/$quizId');
+
+      if (response.statusCode == 200) {
+        return response.data;
+      }
+      return null;
+    } catch (e) {
+      print('Get quiz detail error: $e');
+      return null;
+    }
+  }
+
+  static Future<Map<String, dynamic>?> getQuizQuestions(
+    String quizId, {
+    int page = 1,
+    int limit = 50,
+  }) async {
+    try {
+      await _addAuthInterceptor();
+      final response = await _dio.get(
+        '/quizzes/$quizId/questions',
+        queryParameters: {'page': page, 'limit': limit},
+      );
+
+      if (response.statusCode == 200) {
+        return response.data;
+      }
+      return null;
+    } catch (e) {
+      print('Get quiz questions error: $e');
+      return null;
+    }
+  }
+
+  static Future<List<Question>> getAllQuizQuestions(String quizId) async {
+    try {
+      await _addAuthInterceptor();
+      List<Question> allQuestions = [];
+      int page = 1;
+      const int limit = 50;
+      bool hasMore = true;
+
+      while (hasMore) {
+        final response = await _dio.get(
+          '/quizzes/$quizId/questions',
+          queryParameters: {'page': page, 'limit': limit},
+        );
+
+        if (response.statusCode == 200) {
+          final data = response.data;
+          final List<dynamic> questions = data['questions'] ?? [];
+
+          allQuestions.addAll(
+            questions.map((json) => Question.fromApi(json)).toList(),
+          );
+
+          final int totalPages = data['totalPages'] ?? 1;
+
+          hasMore = page < totalPages;
+          page++;
+        } else {
+          hasMore = false;
+        }
+      }
+
+      return allQuestions;
+    } catch (e) {
+      print('Get all quiz questions error: $e');
+      return [];
     }
   }
 }

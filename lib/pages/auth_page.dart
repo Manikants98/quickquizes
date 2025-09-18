@@ -211,16 +211,6 @@ class _AuthPageState extends State<AuthPage> {
                   ),
                 ),
                 
-                const SizedBox(height: 32),
-                
-                TextButton(
-                  onPressed: _isLoading ? null : () {
-                    Navigator.of(context).pushReplacement(
-                      MaterialPageRoute(builder: (context) => const HomePage()),
-                    );
-                  },
-                  child: const Text('Continue as Guest'),
-                ),
               ],
             ),
           ),

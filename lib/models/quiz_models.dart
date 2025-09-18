@@ -6,6 +6,8 @@ class Question {
   final List<String> options;
   final int correctAnswer;
   final String explanation;
+  final String? difficulty;
+  final int? order;
 
   Question({
     required this.id,
@@ -13,6 +15,8 @@ class Question {
     required this.options,
     required this.correctAnswer,
     required this.explanation,
+    this.difficulty,
+    this.order,
   });
 
   factory Question.fromApi(Map<String, dynamic> json) {
@@ -21,7 +25,9 @@ class Question {
       question: json['question'],
       options: List<String>.from(json['options']),
       correctAnswer: json['correctAnswer'],
-      explanation: json['explanation'],
+      explanation: json['explanation'] ?? '',
+      difficulty: json['difficulty'],
+      order: json['order'],
     );
   }
 }
@@ -33,6 +39,12 @@ class QuizCategory {
   final IconData icon;
   final List<Question> questions;
   final Color color;
+  final int? timeLimit;
+  final bool? isPublic;
+  final int? questionCount;
+  final int? attemptCount;
+  final DateTime? createdAt;
+  final String? createdBy;
 
   QuizCategory({
     required this.id,
@@ -41,18 +53,62 @@ class QuizCategory {
     required this.icon,
     required this.questions,
     required this.color,
+    this.timeLimit,
+    this.isPublic,
+    this.questionCount,
+    this.attemptCount,
+    this.createdAt,
+    this.createdBy,
   });
+
+  QuizCategory copyWith({
+    String? id,
+    String? name,
+    String? description,
+    IconData? icon,
+    List<Question>? questions,
+    Color? color,
+    int? timeLimit,
+    bool? isPublic,
+    int? questionCount,
+    int? attemptCount,
+    DateTime? createdAt,
+    String? createdBy,
+  }) {
+    return QuizCategory(
+      id: id ?? this.id,
+      name: name ?? this.name,
+      description: description ?? this.description,
+      icon: icon ?? this.icon,
+      questions: questions ?? this.questions,
+      color: color ?? this.color,
+      timeLimit: timeLimit ?? this.timeLimit,
+      isPublic: isPublic ?? this.isPublic,
+      questionCount: questionCount ?? this.questionCount,
+      attemptCount: attemptCount ?? this.attemptCount,
+      createdAt: createdAt ?? this.createdAt,
+      createdBy: createdBy ?? this.createdBy,
+    );
+  }
 
   factory QuizCategory.fromApi(Map<String, dynamic> json) {
     return QuizCategory(
-      id: json['id'],
-      name: json['name'],
-      description: json['description'],
-      icon: _getIconFromString(json['icon']),
-      color: _getColorFromString(json['color']),
-      questions: json['questions'] != null 
+      id: json['id'] ?? '',
+      name: json['title'] ?? json['name'] ?? '',
+      description: json['description'] ?? '',
+      icon: _getIconFromString(json['icon'] ?? ''),
+      color: _getColorFromString(json['color'] ?? ''),
+      questions: json['questions'] != null
           ? (json['questions'] as List).map((q) => Question.fromApi(q)).toList()
           : [],
+      timeLimit: json['timeLimit'],
+      isPublic: json['isPublic'] ?? true,
+      questionCount: json['questionCount'] ?? json['_count']?['questions'] ?? 0,
+      attemptCount: json['attemptCount'] ?? 0,
+      createdAt: json['createdAt'] != null
+          ? DateTime.parse(json['createdAt'])
+          : null,
+      createdBy: json['createdBy'] ?? '',
     );
   }
 

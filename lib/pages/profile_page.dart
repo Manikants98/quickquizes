@@ -1,8 +1,11 @@
+import 'package:aptitude_quiz/services/auth_service.dart';
 import 'package:flutter/material.dart';
 import 'package:syncfusion_flutter_charts/charts.dart';
+
 import '../models/quiz_models.dart';
 import '../services/quiz_service.dart';
-import '../services/auth_service.dart';
+import '../widgets/skeleton_loader.dart';
+import 'auth_page.dart';
 
 class ProfilePage extends StatefulWidget {
   const ProfilePage({super.key});
@@ -175,13 +178,17 @@ class _ProfilePageState extends State<ProfilePage> {
             onPressed: () async {
               await AuthService.logout();
               if (!mounted) return;
-              Navigator.pushReplacementNamed(context, '/auth');
+              Navigator.pushAndRemoveUntil(
+                context,
+                MaterialPageRoute(builder: (context) => const AuthPage()),
+                (route) => false,
+              );
             },
           ),
         ],
       ),
       body: isLoading
-          ? const Center(child: CircularProgressIndicator())
+          ? _buildProfileSkeleton()
           : RefreshIndicator(
               onRefresh: _loadProfileData,
               child: SingleChildScrollView(
@@ -465,12 +472,19 @@ class _ProfilePageState extends State<ProfilePage> {
                 ),
               )
             else
-              Wrap(
-                spacing: 8,
-                runSpacing: 8,
-                children: achievements
-                    .map((achievement) => _buildAchievementBadge(achievement))
-                    .toList(),
+              GridView.builder(
+                shrinkWrap: true,
+                physics: const NeverScrollableScrollPhysics(),
+                gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                  crossAxisCount: 2,
+                  childAspectRatio: 1.2,
+                  crossAxisSpacing: 8,
+                  mainAxisSpacing: 8,
+                ),
+                itemCount: achievements.length,
+                itemBuilder: (context, index) {
+                  return _buildAchievementBadge(achievements[index]);
+                },
               ),
           ],
         ),
@@ -651,6 +665,161 @@ class _ProfilePageState extends State<ProfilePage> {
     if (percentage >= 70) return 'Good';
     if (percentage >= 50) return 'Average';
     return 'Needs Work';
+  }
+
+  Widget _buildProfileSkeleton() {
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // User info card skeleton
+          Card(
+            child: Padding(
+              padding: const EdgeInsets.all(20),
+              child: Row(
+                children: [
+                  SkeletonAvatar(size: 60),
+                  const SizedBox(width: 16),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        SkeletonText(width: 120, height: 20),
+                        const SizedBox(height: 8),
+                        SkeletonText(width: 180, height: 16),
+                        const SizedBox(height: 8),
+                        SkeletonText(width: 80, height: 14),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          const SizedBox(height: 16),
+
+          // Stats overview skeleton
+          Card(
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  SkeletonText(width: 100, height: 18),
+                  const SizedBox(height: 16),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Column(
+                          children: [
+                            SkeletonText(width: 40, height: 24),
+                            const SizedBox(height: 4),
+                            SkeletonText(width: 60, height: 14),
+                          ],
+                        ),
+                      ),
+                      Expanded(
+                        child: Column(
+                          children: [
+                            SkeletonText(width: 40, height: 24),
+                            const SizedBox(height: 4),
+                            SkeletonText(width: 60, height: 14),
+                          ],
+                        ),
+                      ),
+                      Expanded(
+                        child: Column(
+                          children: [
+                            SkeletonText(width: 40, height: 24),
+                            const SizedBox(height: 4),
+                            SkeletonText(width: 60, height: 14),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ),
+          const SizedBox(height: 16),
+
+          // Performance chart skeleton
+          Card(
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  SkeletonText(width: 140, height: 18),
+                  const SizedBox(height: 16),
+                  SkeletonLoader(
+                    width: double.infinity,
+                    height: 200,
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          const SizedBox(height: 16),
+
+          // Achievements skeleton
+          Card(
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  SkeletonText(width: 100, height: 18),
+                  const SizedBox(height: 16),
+                  GridView.builder(
+                    shrinkWrap: true,
+                    physics: const NeverScrollableScrollPhysics(),
+                    gridDelegate:
+                        const SliverGridDelegateWithFixedCrossAxisCount(
+                          crossAxisCount: 2,
+                          childAspectRatio: 3,
+                          crossAxisSpacing: 8,
+                          mainAxisSpacing: 8,
+                        ),
+                    itemCount: 4,
+                    itemBuilder: (context, index) {
+                      return Card(
+                        child: Padding(
+                          padding: const EdgeInsets.all(12),
+                          child: Row(
+                            children: [
+                              SkeletonAvatar(size: 24),
+                              const SizedBox(width: 8),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    SkeletonText(
+                                      width: double.infinity,
+                                      height: 12,
+                                    ),
+                                    const SizedBox(height: 4),
+                                    SkeletonText(width: 60, height: 10),
+                                  ],
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      );
+                    },
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
   }
 
   String _formatTime(int seconds) {
