@@ -1,6 +1,7 @@
 import 'package:dynamic_color/dynamic_color.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:aptitude_quiz/pages/home_page.dart';
 import 'pages/auth_page.dart';
 import 'services/auth_service.dart';
@@ -20,13 +21,46 @@ void main() async {
   runApp(const MyApp());
 }
 
-const _brandBlue = Color(0xFF1E88E5);
+const Map<String, Color> _colorOptions = {
+  'blue': Color(0xFF1E88E5),
+  'green': Color(0xFF4CAF50),
+  'red': Color(0xFFF44336),
+  'purple': Color(0xFF9C27B0),
+  'orange': Color(0xFFFF9800),
+  'pink': Color(0xFFE91E63),
+  'teal': Color(0xFF009688),
+  'indigo': Color(0xFF3F51B5),
+};
 
-class MyApp extends StatelessWidget {
+class MyApp extends StatefulWidget {
   const MyApp({super.key});
 
   @override
+  State<MyApp> createState() => _MyAppState();
+}
+
+class _MyAppState extends State<MyApp> {
+  bool _isDarkMode = false;
+  String _selectedColor = 'green';
+
+  @override
+  void initState() {
+    super.initState();
+    _loadThemeSettings();
+  }
+
+  Future<void> _loadThemeSettings() async {
+    final prefs = await SharedPreferences.getInstance();
+    setState(() {
+      _isDarkMode = prefs.getBool('isDarkMode') ?? false;
+      _selectedColor = prefs.getString('primaryColor') ?? 'green';
+    });
+  }
+
+  @override
   Widget build(BuildContext context) {
+    final seedColor = _colorOptions[_selectedColor] ?? _colorOptions['green']!;
+    
     return DynamicColorBuilder(
       builder: (ColorScheme? lightDynamic, ColorScheme? darkDynamic) {
         ColorScheme lightColorScheme;
@@ -36,9 +70,9 @@ class MyApp extends StatelessWidget {
           lightColorScheme = lightDynamic.harmonized();
           darkColorScheme = darkDynamic.harmonized();
         } else {
-          lightColorScheme = ColorScheme.fromSeed(seedColor: _brandBlue);
+          lightColorScheme = ColorScheme.fromSeed(seedColor: seedColor);
           darkColorScheme = ColorScheme.fromSeed(
-            seedColor: _brandBlue,
+            seedColor: seedColor,
             brightness: Brightness.dark,
           );
         }
@@ -46,6 +80,7 @@ class MyApp extends StatelessWidget {
         return MaterialApp(
           title: 'Aptitude Quiz',
           debugShowCheckedModeBanner: false,
+          themeMode: _isDarkMode ? ThemeMode.dark : ThemeMode.light,
           theme: ThemeData(
             colorScheme: lightColorScheme,
             useMaterial3: true,
@@ -114,7 +149,6 @@ class _AuthCheckPageState extends State<AuthCheckPage> {
   }
 
   Future<void> _checkAuthStatus() async {
-    // Show splash for a moment
     await Future.delayed(const Duration(seconds: 5));
 
     final isLoggedIn = await AuthService.isLoggedIn();
@@ -144,15 +178,18 @@ class _AuthCheckPageState extends State<AuthCheckPage> {
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              // App Icon with background
               Container(
                 width: 120,
                 height: 120,
                 decoration: BoxDecoration(
-                  color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.1),
+                  color: Theme.of(
+                    context,
+                  ).colorScheme.primary.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(24),
                   border: Border.all(
-                    color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.2),
+                    color: Theme.of(
+                      context,
+                    ).colorScheme.primary.withValues(alpha: 0.2),
                     width: 2,
                   ),
                 ),
@@ -163,8 +200,7 @@ class _AuthCheckPageState extends State<AuthCheckPage> {
                 ),
               ),
               const SizedBox(height: 32),
-              
-              // App Title
+
               Text(
                 'QuickQuiz',
                 style: Theme.of(context).textTheme.displaySmall?.copyWith(
@@ -173,17 +209,18 @@ class _AuthCheckPageState extends State<AuthCheckPage> {
                 ),
               ),
               const SizedBox(height: 8),
-              
-              // Subtitle
+
               Text(
                 'Test Your Knowledge',
                 style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                  color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
+                  color: Theme.of(
+                    context,
+                  ).colorScheme.onSurface.withValues(alpha: 0.7),
                   fontWeight: FontWeight.w500,
                 ),
               ),
               const SizedBox(height: 48),
-              
+
               // Loading indicator with modern styling
               Container(
                 padding: const EdgeInsets.all(16),
@@ -199,14 +236,18 @@ class _AuthCheckPageState extends State<AuthCheckPage> {
                       child: CircularProgressIndicator(
                         strokeWidth: 3,
                         color: Theme.of(context).colorScheme.primary,
-                        backgroundColor: Theme.of(context).colorScheme.primary.withValues(alpha: 0.2),
+                        backgroundColor: Theme.of(
+                          context,
+                        ).colorScheme.primary.withValues(alpha: 0.2),
                       ),
                     ),
                     const SizedBox(height: 12),
                     Text(
                       'Loading...',
                       style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                        color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
+                        color: Theme.of(
+                          context,
+                        ).colorScheme.onSurface.withValues(alpha: 0.6),
                         fontWeight: FontWeight.w500,
                       ),
                     ),

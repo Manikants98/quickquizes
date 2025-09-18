@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'dart:io';
 
 import 'package:dio/dio.dart';
@@ -346,10 +347,23 @@ class ApiService {
 
     try {
       final prefs = await SharedPreferences.getInstance();
-      final userId = prefs.getString('user_id');
+      final userJson = prefs.getString('current_user');
+      
+      print('🔍 Debug - userJson from storage: $userJson');
+      
+      if (userJson == null) {
+        print('❌ No user data found in SharedPreferences');
+        throw Exception('User not found in storage');
+      }
+      
+      final user = json.decode(userJson);
+      print('🔍 Debug - parsed user object: $user');
+      
+      final userId = user['id'];
+      print('🔍 Debug - extracted userId: $userId');
       
       if (userId == null) {
-        throw Exception('User ID not found');
+        throw Exception('User ID not found in user data');
       }
 
       final response = await _dio.post('/scores', data: {
@@ -367,6 +381,41 @@ class ApiService {
     } catch (e) {
       print('Error saving score: $e');
       throw Exception('Failed to save score: $e');
+    }
+  }
+
+  static Future<List<Map<String, dynamic>>> getUserScores([String? categoryId]) async {
+    await _addAuthInterceptor();
+
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final userJson = prefs.getString('current_user');
+      
+      if (userJson == null) {
+        return [];
+      }
+      
+      final user = json.decode(userJson);
+      final userId = user['id'];
+      
+      if (userId == null) {
+        return [];
+      }
+
+      final queryParams = {'userId': userId};
+      if (categoryId != null) {
+        queryParams['categoryId'] = categoryId;
+      }
+
+      final response = await _dio.get('/scores', queryParameters: queryParams);
+
+      if (response.statusCode == 200 && response.data['success'] == true) {
+        return List<Map<String, dynamic>>.from(response.data['scores']);
+      }
+      return [];
+    } catch (e) {
+      print('Error fetching user scores: $e');
+      return [];
     }
   }
 

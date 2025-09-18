@@ -6,6 +6,7 @@ import '../models/quiz_models.dart';
 import '../services/quiz_service.dart';
 import '../widgets/skeleton_loader.dart';
 import 'auth_page.dart';
+import 'settings_page.dart';
 
 class ProfilePage extends StatefulWidget {
   const ProfilePage({super.key});
@@ -173,6 +174,23 @@ class _ProfilePageState extends State<ProfilePage> {
         title: const Text('Profile'),
         backgroundColor: Theme.of(context).colorScheme.inversePrimary,
         actions: [
+          IconButton(
+            icon: const Icon(Icons.palette_outlined),
+            onPressed: () async {
+              await Navigator.push(
+                context,
+                MaterialPageRoute(builder: (context) => const SettingsPage()),
+              );
+              // Reload the app to apply theme changes
+              if (mounted) {
+                Navigator.pushAndRemoveUntil(
+                  context,
+                  MaterialPageRoute(builder: (context) => const ProfilePage()),
+                  (route) => false,
+                );
+              }
+            },
+          ),
           IconButton(
             icon: const Icon(Icons.logout),
             onPressed: () async {
@@ -478,8 +496,8 @@ class _ProfilePageState extends State<ProfilePage> {
                 gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
                   crossAxisCount: 2,
                   childAspectRatio: 1.2,
-                  crossAxisSpacing: 8,
-                  mainAxisSpacing: 8,
+                  crossAxisSpacing: 12,
+                  mainAxisSpacing: 12,
                 ),
                 itemCount: achievements.length,
                 itemBuilder: (context, index) {
@@ -494,39 +512,51 @@ class _ProfilePageState extends State<ProfilePage> {
 
   Widget _buildAchievementBadge(Achievement achievement) {
     return Container(
-      padding: const EdgeInsets.all(12),
+      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: achievement.color.withValues(alpha: 0.1),
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(16),
         border: Border.all(
           color: achievement.isUnlocked
               ? achievement.color
               : Colors.grey.withValues(alpha: 0.3),
+          width: 2,
         ),
       ),
       child: Column(
-        mainAxisSize: MainAxisSize.min,
+        mainAxisAlignment: MainAxisAlignment.center,
+        crossAxisAlignment: CrossAxisAlignment.center,
         children: [
           Icon(
             achievement.icon,
             color: achievement.isUnlocked ? achievement.color : Colors.grey,
-            size: 32,
+            size: 36,
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: 12),
           Text(
             achievement.title,
             style: TextStyle(
               fontWeight: FontWeight.bold,
-              fontSize: 12,
+              fontSize: 13,
               color: achievement.isUnlocked ? achievement.color : Colors.grey,
             ),
             textAlign: TextAlign.center,
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
           ),
-          const SizedBox(height: 4),
-          Text(
-            achievement.description,
-            style: TextStyle(fontSize: 10, color: Colors.grey[600]),
-            textAlign: TextAlign.center,
+          const SizedBox(height: 6),
+          Flexible(
+            child: Text(
+              achievement.description,
+              style: TextStyle(
+                fontSize: 10,
+                color: Colors.grey[600],
+                height: 1.2,
+              ),
+              textAlign: TextAlign.center,
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+            ),
           ),
         ],
       ),
@@ -535,6 +565,7 @@ class _ProfilePageState extends State<ProfilePage> {
 
   Widget _buildCategoryBreakdown() {
     return Card(
+      elevation: Theme.of(context).brightness == Brightness.dark ? 4 : 2,
       child: Padding(
         padding: const EdgeInsets.all(16),
         child: Column(
@@ -544,9 +575,9 @@ class _ProfilePageState extends State<ProfilePage> {
               'Category Performance',
               style: Theme.of(
                 context,
-              ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
+              ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
             ),
-            const SizedBox(height: 16),
+            const SizedBox(height: 12),
             ...categories.map((category) {
               final stats = categoryStats[category.id] ?? {};
               return _buildCategoryPerformanceItem(category, stats);
@@ -561,71 +592,52 @@ class _ProfilePageState extends State<ProfilePage> {
     QuizCategory category,
     Map<String, dynamic> stats,
   ) {
-    final isCompleted = stats['isCompleted'] ?? false;
-    final bestScore = stats['bestScore'] ?? 0;
-    final totalAttempts = stats['totalAttempts'] ?? 0;
-    final bestPercentage = stats['bestScorePercentage'] ?? 0.0;
+    final bestPercentage = _getBestScorePercentage(stats);
 
-    return Container(
-      margin: const EdgeInsets.only(bottom: 12),
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        border: Border.all(color: Colors.grey.withValues(alpha: 0.3)),
-        borderRadius: BorderRadius.circular(8),
-      ),
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12),
       child: Row(
         children: [
-          Icon(category.icon, color: category.color, size: 24),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  category.name,
-                  style: const TextStyle(
-                    fontWeight: FontWeight.bold,
-                    fontSize: 14,
-                  ),
-                ),
-                const SizedBox(height: 4),
-                if (isCompleted) ...[
-                  Text(
-                    'Best: $bestScore questions (${bestPercentage.toStringAsFixed(1)}%)',
-                    style: TextStyle(fontSize: 12, color: Colors.grey[600]),
-                  ),
-                  Text(
-                    'Attempts: $totalAttempts',
-                    style: TextStyle(fontSize: 12, color: Colors.grey[600]),
-                  ),
-                ] else ...[
-                  Text(
-                    'Not attempted yet',
-                    style: TextStyle(fontSize: 12, color: Colors.grey[600]),
-                  ),
-                ],
-              ],
+          Container(
+            width: 12,
+            height: 12,
+            decoration: BoxDecoration(
+              color: category.color,
+              shape: BoxShape.circle,
             ),
           ),
-          if (isCompleted)
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-              decoration: BoxDecoration(
-                color: _getPerformanceColor(bestPercentage),
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: Text(
-                _getPerformanceLabel(bestPercentage),
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontSize: 10,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Text(
+              category.name,
+              style: Theme.of(context).textTheme.bodyMedium,
             ),
+          ),
+          Text(
+            '${bestPercentage.toStringAsFixed(1)}%',
+            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+              fontWeight: FontWeight.bold,
+              color: category.color,
+            ),
+          ),
         ],
       ),
     );
+  }
+
+  // Helper method to extract best score percentage from stats
+  double _getBestScorePercentage(Map<String, dynamic> stats) {
+    final bestScore = stats['bestScore'];
+    if (bestScore is Map<String, dynamic>) {
+      return (bestScore['percentage'] as num? ?? 0).toDouble();
+    } else if (bestScore is num) {
+      return bestScore.toDouble();
+    }
+    final bestPercentage = stats['bestScorePercentage'];
+    if (bestPercentage is num) {
+      return bestPercentage.toDouble();
+    }
+    return 0.0;
   }
 
   String _getUserLevel() {
@@ -653,27 +665,12 @@ class _ProfilePageState extends State<ProfilePage> {
     }
   }
 
-  Color _getPerformanceColor(double percentage) {
-    if (percentage >= 90) return Colors.green;
-    if (percentage >= 70) return Colors.orange;
-    if (percentage >= 50) return Colors.blue;
-    return Colors.red;
-  }
-
-  String _getPerformanceLabel(double percentage) {
-    if (percentage >= 90) return 'Excellent';
-    if (percentage >= 70) return 'Good';
-    if (percentage >= 50) return 'Average';
-    return 'Needs Work';
-  }
-
   Widget _buildProfileSkeleton() {
     return SingleChildScrollView(
       padding: const EdgeInsets.all(16),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // User info card skeleton
           Card(
             child: Padding(
               padding: const EdgeInsets.all(20),

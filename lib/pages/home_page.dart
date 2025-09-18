@@ -36,6 +36,22 @@ class _HomePageState extends State<HomePage>
   }
 
   @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    // Refresh data when returning to this page
+    if (!isLoading) {
+      _refreshData();
+    }
+  }
+
+  Future<void> _refreshData() async {
+    setState(() {
+      isLoading = true;
+    });
+    await _loadStatistics();
+  }
+
+  @override
   void dispose() {
     _animationController.dispose();
     _isDisposed = true;
@@ -103,7 +119,11 @@ class _HomePageState extends State<HomePage>
                         fontWeight: FontWeight.bold,
                       ),
                     )
-                  : Icon(Icons.person, size: 18, color: Theme.of(context).colorScheme.onPrimary),
+                  : Icon(
+                      Icons.person,
+                      size: 18,
+                      color: Theme.of(context).colorScheme.onPrimary,
+                    ),
             ),
             tooltip: 'Profile',
           ),
@@ -577,8 +597,12 @@ class _HomePageState extends State<HomePage>
               children: [
                 Expanded(
                   child: ElevatedButton.icon(
-                    onPressed: () =>
-                        Navigator.pushReplacementNamed(context, '/'),
+                    onPressed: () => Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => const Categories(),
+                      ),
+                    ),
                     icon: const Icon(Icons.quiz),
                     label: const Text('Take Quiz'),
                     style: ElevatedButton.styleFrom(
@@ -776,7 +800,7 @@ class _HomePageState extends State<HomePage>
             ],
           ),
           const SizedBox(height: 16),
-          
+
           // Chart skeleton
           Card(
             child: Padding(
@@ -796,7 +820,7 @@ class _HomePageState extends State<HomePage>
             ),
           ),
           const SizedBox(height: 16),
-          
+
           // Recent activities skeleton
           Card(
             child: Padding(
@@ -806,25 +830,31 @@ class _HomePageState extends State<HomePage>
                 children: [
                   const SkeletonText(width: 120, height: 18),
                   const SizedBox(height: 16),
-                  ...List.generate(3, (index) => Padding(
-                    padding: const EdgeInsets.only(bottom: 12),
-                    child: Row(
-                      children: [
-                        SkeletonAvatar(size: 32),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              SkeletonText(width: double.infinity, height: 14),
-                              const SizedBox(height: 4),
-                              SkeletonText(width: 100, height: 12),
-                            ],
+                  ...List.generate(
+                    3,
+                    (index) => Padding(
+                      padding: const EdgeInsets.only(bottom: 12),
+                      child: Row(
+                        children: [
+                          SkeletonAvatar(size: 32),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                SkeletonText(
+                                  width: double.infinity,
+                                  height: 14,
+                                ),
+                                const SizedBox(height: 4),
+                                SkeletonText(width: 100, height: 12),
+                              ],
+                            ),
                           ),
-                        ),
-                      ],
+                        ],
+                      ),
                     ),
-                  )),
+                  ),
                 ],
               ),
             ),

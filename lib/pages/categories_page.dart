@@ -23,13 +23,45 @@ class _CategoriesState extends State<Categories> {
     _loadCategories();
   }
 
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    // Refresh data when returning to this page
+    if (!isLoading) {
+      _refreshData();
+    }
+  }
+
+  Future<void> _refreshData() async {
+    setState(() {
+      isLoading = true;
+    });
+    await _loadCategories();
+  }
+
   Future<void> _loadCategories() async {
     try {
       final loadedCategories = await ApiService.getCategories();
       final stats = <String, Map<String, dynamic>>{};
 
       for (final category in loadedCategories) {
-        stats[category.id] = await QuizService.getQuizStatus(category.id);
+        // Get both local and backend stats
+        final localStats = await QuizService.getQuizStatus(category.id);
+        try {
+          final backendScores = await ApiService.getUserScores(category.id);
+          final hasBackendAttempts = backendScores.isNotEmpty;
+          
+          // Merge local and backend data
+          stats[category.id] = {
+            ...localStats,
+            'hasAttempted': localStats['hasAttempted'] || hasBackendAttempts,
+            'totalAttempts': (localStats['totalAttempts'] as int) + backendScores.length,
+            'backendAttempts': backendScores.length,
+          };
+        } catch (e) {
+          print('Failed to get backend scores for ${category.id}: $e');
+          stats[category.id] = localStats;
+        }
       }
 
       if (mounted) {

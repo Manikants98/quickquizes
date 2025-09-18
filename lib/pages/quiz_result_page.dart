@@ -218,9 +218,11 @@ class QuizResultPage extends StatelessWidget {
               children: [
                 Expanded(
                   child: OutlinedButton.icon(
-                    onPressed: () => Navigator.of(
-                      context,
-                    ).popUntil((route) => route.isFirst),
+                    onPressed: () {
+                      Navigator.of(context).popUntil((route) => route.isFirst);
+                      // Force refresh of home page data
+                      Navigator.of(context).pushReplacementNamed('/');
+                    },
                     icon: const Icon(Icons.home),
                     label: const Text('Home'),
                     style: OutlinedButton.styleFrom(
