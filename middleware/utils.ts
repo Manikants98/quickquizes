@@ -8,6 +8,7 @@ export function extractRequestContext(request: NextRequest): RequestContext {
   });
 
   return {
+    pathname: request.nextUrl.pathname,
     url: request.url,
     method: request.method,
     headers,
@@ -35,13 +36,13 @@ export function createErrorResponse(
 
 export function isPublicPath(pathname: string): boolean {
   const publicPaths = [
-    '/',
-    '/admin',
-    '/api/auth',
-    '/login',
-    '/register',
-    '/public'
+    "/",
+    "/admin",
+    "/api/auth",
+    "/login",
+    "/register",
+    "/public",
   ];
-  
-  return publicPaths.some(path => pathname.startsWith(path));
+
+  return publicPaths.some((path) => pathname.startsWith(path));
 }

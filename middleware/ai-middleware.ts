@@ -3,16 +3,124 @@ import { analyzeRequest } from "../lib/gemini";
 import { AIMiddlewareConfig, RequestContext, MiddlewareResult } from "./types";
 import { extractRequestContext, createErrorResponse } from "./utils";
 
-// Global state for caching and rate limiting
-const requestCount = new Map<string, number>();
-const cache = new Map<string, any>();
-const lastRequestTime = new Map<string, number>();
+// Constants
 const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
 const MIN_REQUEST_INTERVAL = 1000; // 1 second between AI calls
+const MAX_CACHE_SIZE = 1000; // Prevent memory bloat
+const MAX_REQUEST_HISTORY = 10000; // Prevent unbounded growth
+const CACHE_KEY_MAX_LENGTH = 100; // Limit cache key size
 
-// Initialize configuration
+// Suspicious patterns compiled once
+const SUSPICIOUS_PATTERNS = [
+  /DROP\s+TABLE/i,
+  /SELECT\s*\*\s*FROM/i,
+  /\.\.\/\.\.\/\.\.\//,
+  /<script[^>]*>/i,
+  /eval\s*KATEX_INLINE_OPEN/i,
+  /javascript:/i,
+] as const;
+
+// LRU Cache implementation
+class LRUCache<T> {
+  private cache = new Map<string, { data: T; timestamp: number }>();
+  private accessOrder: string[] = [];
+
+  constructor(private maxSize: number) {}
+
+  get(key: string): T | null {
+    const entry = this.cache.get(key);
+    if (!entry || Date.now() - entry.timestamp > CACHE_DURATION) {
+      this.cache.delete(key);
+      return null;
+    }
+
+    // Move to end (most recently used)
+    const index = this.accessOrder.indexOf(key);
+    if (index > -1) {
+      this.accessOrder.splice(index, 1);
+    }
+    this.accessOrder.push(key);
+
+    return entry.data;
+  }
+
+  set(key: string, data: T): void {
+    // Evict oldest if at capacity
+    if (this.cache.size >= this.maxSize && !this.cache.has(key)) {
+      const oldest = this.accessOrder.shift();
+      if (oldest) this.cache.delete(oldest);
+    }
+
+    this.cache.set(key, { data, timestamp: Date.now() });
+
+    const index = this.accessOrder.indexOf(key);
+    if (index > -1) {
+      this.accessOrder.splice(index, 1);
+    }
+    this.accessOrder.push(key);
+  }
+
+  clear(): void {
+    this.cache.clear();
+    this.accessOrder = [];
+  }
+}
+
+// Rate limiter with automatic cleanup
+class RateLimiter {
+  private lastRequestTime = new Map<string, number>();
+  private requestCount = new Map<string, number>();
+  private cleanupInterval: NodeJS.Timeout;
+
+  constructor(private maxEntries: number = MAX_REQUEST_HISTORY) {
+    // Cleanup old entries every 5 minutes
+    this.cleanupInterval = setInterval(() => this.cleanup(), 5 * 60 * 1000);
+  }
+
+  shouldAllowRequest(ip: string): boolean {
+    const lastCall = this.lastRequestTime.get(ip);
+    return !lastCall || Date.now() - lastCall > MIN_REQUEST_INTERVAL;
+  }
+
+  recordRequest(ip: string): void {
+    this.lastRequestTime.set(ip, Date.now());
+    const count = this.requestCount.get(ip) || 0;
+    this.requestCount.set(ip, count + 1);
+
+    // Prevent unbounded growth
+    if (this.requestCount.size > this.maxEntries) {
+      this.cleanup();
+    }
+  }
+
+  getRequestCount(ip: string): number {
+    return this.requestCount.get(ip) || 0;
+  }
+
+  private cleanup(): void {
+    const now = Date.now();
+    const staleThreshold = 60 * 60 * 1000; // 1 hour
+
+    for (const [ip, time] of this.lastRequestTime.entries()) {
+      if (now - time > staleThreshold) {
+        this.lastRequestTime.delete(ip);
+        this.requestCount.delete(ip);
+      }
+    }
+  }
+
+  destroy(): void {
+    clearInterval(this.cleanupInterval);
+  }
+}
+
+// Global instances
+const cache = new LRUCache<any>(MAX_CACHE_SIZE);
+const rateLimiter = new RateLimiter();
+
+// Initialize configuration with defaults
 export function createAIMiddlewareConfig(
-  config: AIMiddlewareConfig = {}
+  config: Partial<AIMiddlewareConfig> = {}
 ): AIMiddlewareConfig {
   return {
     enableAuth: true,
@@ -20,7 +128,7 @@ export function createAIMiddlewareConfig(
     enableErrorHandling: true,
     enableResponseTransform: true,
     ...config,
-  };
+  } as AIMiddlewareConfig;
 }
 
 // Main processing function
@@ -28,21 +136,21 @@ export async function processAIMiddleware(
   request: NextRequest,
   config: AIMiddlewareConfig
 ): Promise<NextResponse | null> {
-  const startTime = Date.now();
+  const startTime = performance.now();
 
   try {
     const context = extractRequestContext(request);
     const cacheKey = generateCacheKey(context);
 
     // Check cache first
-    const cached = getFromCache(cacheKey);
+    const cached = cache.get(cacheKey);
     if (cached) {
       console.log("🚀 Using cached AI decision");
-      return executeAction(cached, request);
+      return executeAction(cached, request, context);
     }
 
     // Rate limit AI calls
-    if (!shouldMakeAICall(context.ip)) {
+    if (!rateLimiter.shouldAllowRequest(context.ip)) {
       console.log("⏱️ AI call rate limited, using fallback logic");
       return fallbackLogic(context, request);
     }
@@ -52,22 +160,25 @@ export async function processAIMiddleware(
       {
         context,
         config,
-        requestHistory: getRequestHistory(context.ip),
+        requestHistory: rateLimiter.getRequestCount(context.ip),
       },
-      buildAnalysisContext(context, config)
+      buildAnalysisContext(config)
     );
 
     // Cache the result
-    setCache(cacheKey, analysis);
-    lastRequestTime.set(context.ip, Date.now());
+    cache.set(cacheKey, analysis);
+    rateLimiter.recordRequest(context.ip);
 
-    const result = await executeAction(analysis, request);
+    const result = await executeAction(analysis, request, context);
 
-    logResult({
-      success: true,
-      analysis,
-      executionTime: Date.now() - startTime,
-    });
+    // Only log in development or if explicitly enabled
+    if (process.env.NODE_ENV === "development") {
+      logResult({
+        success: true,
+        analysis,
+        executionTime: performance.now() - startTime,
+      });
+    }
 
     return result;
   } catch (error) {
@@ -76,63 +187,26 @@ export async function processAIMiddleware(
   }
 }
 
-// Cache functions
+// Optimized cache key generation
 function generateCacheKey(context: RequestContext): string {
-  return `${context.method}-${context.url}-${context.userAgent.substring(
-    0,
-    20
-  )}`;
+  const key = `${context.method}-${
+    context.pathname
+  }-${context.userAgent.substring(0, 20)}`;
+  return key.length > CACHE_KEY_MAX_LENGTH
+    ? key.substring(0, CACHE_KEY_MAX_LENGTH)
+    : key;
 }
 
-function getFromCache(key: string): any {
-  const cached = cache.get(key);
-  if (cached && Date.now() - cached.timestamp < CACHE_DURATION) {
-    return cached.data;
-  }
-  cache.delete(key);
-  return null;
-}
-
-function setCache(key: string, data: any): void {
-  cache.set(key, {
-    data,
-    timestamp: Date.now(),
-  });
-}
-
-// Rate limiting functions
-function shouldMakeAICall(ip: string): boolean {
-  const lastCall = lastRequestTime.get(ip);
-  return !lastCall || Date.now() - lastCall > MIN_REQUEST_INTERVAL;
-}
-
-function getRequestHistory(ip: string): number {
-  return requestCount.get(ip) || 0;
-}
-
-function updateRequestCount(ip: string): void {
-  const current = requestCount.get(ip) || 0;
-  requestCount.set(ip, current + 1);
-}
-
-// Fallback logic function
+// Optimized fallback logic with regex patterns
 function fallbackLogic(
   context: RequestContext,
   request: NextRequest
 ): NextResponse | null {
-  // Simple rule-based fallback when AI is unavailable
-  const suspiciousPatterns = [
-    "DROP TABLE",
-    "SELECT * FROM",
-    "../../../",
-    "<script>",
-    "eval(",
-    "javascript:",
-  ];
+  // Check URL and body for suspicious patterns
+  const checkString = `${context.url} ${JSON.stringify(context.body || "")}`;
 
-  const requestStr = JSON.stringify(context).toLowerCase();
-  const isSuspicious = suspiciousPatterns.some((pattern) =>
-    requestStr.includes(pattern.toLowerCase())
+  const isSuspicious = SUSPICIOUS_PATTERNS.some((pattern) =>
+    pattern.test(checkString)
   );
 
   if (isSuspicious) {
@@ -148,51 +222,31 @@ function fallbackLogic(
     );
   }
 
-  // Allow request to continue
   console.log("✅ Fallback logic: Request allowed");
   return null;
 }
 
-// Analysis context builder
-function buildAnalysisContext(
-  context: RequestContext,
-  config: AIMiddlewareConfig
-): string {
-  const contextParts = [];
+// Simplified analysis context builder
+function buildAnalysisContext(config: AIMiddlewareConfig): string {
+  const features = [];
 
-  if (config.enableAuth) {
-    contextParts.push(
-      "AUTHENTICATION: Analyze if user has valid authentication"
-    );
+  if (config.enableAuth) features.push("AUTHENTICATION");
+  if (config.enableRateLimit) features.push("RATE_LIMITING");
+  if (config.enableErrorHandling) features.push("ERROR_HANDLING");
+  if (config.enableResponseTransform) features.push("RESPONSE_TRANSFORM");
+
+  if (config.customRules?.length) {
+    features.push(`CUSTOM_RULES: ${config.customRules.join(", ")}`);
   }
 
-  if (config.enableRateLimit) {
-    contextParts.push("RATE_LIMITING: Check if request exceeds rate limits");
-  }
-
-  if (config.enableErrorHandling) {
-    contextParts.push(
-      "ERROR_HANDLING: Identify potential errors and handle appropriately"
-    );
-  }
-
-  if (config.enableResponseTransform) {
-    contextParts.push(
-      "RESPONSE_TRANSFORM: Determine if response needs transformation"
-    );
-  }
-
-  if (config.customRules) {
-    contextParts.push(`CUSTOM_RULES: ${config.customRules.join(", ")}`);
-  }
-
-  return contextParts.join(" | ");
+  return features.join(" | ");
 }
 
-// Action execution function
+// Optimized action execution
 async function executeAction(
   analysis: any,
-  request: NextRequest
+  request: NextRequest,
+  context: RequestContext
 ): Promise<NextResponse | null> {
   switch (analysis.action) {
     case "block":
@@ -213,49 +267,41 @@ async function executeAction(
       );
 
     case "transform":
-      // Apply transformations to the request
-      transformRequest(request, analysis.modifications);
-      return null; // Let the request continue with modifications
+      // Apply transformations inline if needed
+      if (analysis.modifications?.headers) {
+        for (const [key, value] of Object.entries(
+          analysis.modifications.headers
+        )) {
+          request.headers.set(key, String(value));
+        }
+      }
+      return null;
 
     case "error":
       return createErrorResponse(analysis.reasoning, 500);
 
     case "allow":
     default:
-      // Update request count for rate limiting
-      updateRequestCount(extractRequestContext(request).ip);
-      return null; // Continue to next middleware/handler
+      return null;
   }
 }
 
-// Request transformation function
-function transformRequest(
-  request: NextRequest,
-  modifications: any
-): NextRequest {
-  // Apply AI-suggested modifications to the request
-  if (modifications?.headers) {
-    Object.entries(modifications.headers).forEach(([key, value]) => {
-      request.headers.set(key, value as string);
-    });
-  }
-  return request;
+// Simplified error handling
+function handleError(error: unknown, request: NextRequest): NextResponse {
+  const message = error instanceof Error ? error.message : String(error);
+  return createErrorResponse(`AI Middleware Error: ${message}`, 500);
 }
 
-// Error handling function
-function handleError(error: any, request: NextRequest): NextResponse {
-  return createErrorResponse(
-    `AI Middleware Error: ${
-      error instanceof Error ? error.message : String(error)
-    }`,
-    500
-  );
-}
-
-// Logging function
+// Lightweight logging
 function logResult(result: MiddlewareResult): void {
   console.log("AI Middleware Result:", {
     timestamp: new Date().toISOString(),
     ...result,
   });
+}
+
+// Cleanup function for graceful shutdown
+export function cleanupAIMiddleware(): void {
+  rateLimiter.destroy();
+  cache.clear();
 }

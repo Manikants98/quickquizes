@@ -41,6 +41,8 @@ export default function QuizzesPage() {
   const [quizModalOpened, setQuizModalOpened] = useState(false);
   const [loading, setLoading] = useState(false);
   const [editingQuiz, setEditingQuiz] = useState<Quiz | null>(null);
+  const [submitting, setSubmitting] = useState(false);
+  const [deletingQuizId, setDeletingQuizId] = useState<string | null>(null);
 
   // Pagination state
   const [currentPage, setCurrentPage] = useState(1);
@@ -86,6 +88,7 @@ export default function QuizzesPage() {
       return;
 
     try {
+      setDeletingQuizId(quizId);
       const response = await fetch(`/api/v1/quizzes/${quizId}`, {
         method: "DELETE",
       });
@@ -113,6 +116,8 @@ export default function QuizzesPage() {
         message: "Failed to delete quiz",
         color: "red",
       });
+    } finally {
+      setDeletingQuizId(null);
     }
   };
 
@@ -132,6 +137,7 @@ export default function QuizzesPage() {
 
   const handleCreateOrUpdateQuiz = async (values: any) => {
     try {
+      setSubmitting(true);
       const isEditing = editingQuiz && values.id;
       const url = isEditing
         ? `/api/v1/quizzes/${values.id}`
@@ -185,6 +191,8 @@ export default function QuizzesPage() {
         message: isEditing ? "Failed to update quiz" : "Failed to create quiz",
         color: "red",
       });
+    } finally {
+      setSubmitting(false);
     }
   };
 
@@ -271,6 +279,8 @@ export default function QuizzesPage() {
                           size="sm"
                           onClick={() => quiz.id && handleDeleteQuiz(quiz.id)}
                           title="Delete Question"
+                          loading={deletingQuizId === quiz.id}
+                          disabled={deletingQuizId === quiz.id}
                         >
                           <IconTrash size="0.8rem" />
                         </ActionIcon>
@@ -357,7 +367,7 @@ export default function QuizzesPage() {
                 rows={3}
               />
 
-              <Group grow>
+              <Group grow align="flex-end">
                 <NumberInput
                   label="Time Limit (minutes)"
                   min={1}
@@ -368,6 +378,7 @@ export default function QuizzesPage() {
                 <Checkbox
                   label="Public Quiz"
                   description="Allow anyone to take this quiz"
+                  size="xs"
                   {...quizForm.getInputProps("isPublic", { type: "checkbox" })}
                 />
               </Group>
@@ -396,7 +407,7 @@ export default function QuizzesPage() {
               >
                 Cancel
               </Button>
-              <Button type="submit">
+              <Button type="submit" loading={submitting} disabled={submitting}>
                 {editingQuiz ? "Update Quiz" : "Create Quiz"}
               </Button>
             </Group>

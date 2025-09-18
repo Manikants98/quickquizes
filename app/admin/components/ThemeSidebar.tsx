@@ -383,21 +383,6 @@ export default function ThemeSidebar({ opened, onClose }: ThemeSidebarProps) {
 
         <Divider />
 
-        {/* Font Information */}
-        <div>
-          <Text fw={500} mb="sm">
-            Typography
-          </Text>
-          <Group justify="space-between">
-            <Text size="sm">Font Family</Text>
-            <Text size="sm" c="dimmed" style={{ fontFamily: "Poppins" }}>
-              Poppins
-            </Text>
-          </Group>
-        </div>
-
-        <Divider />
-
         {/* Reset Button */}
         <Button
           variant="light"

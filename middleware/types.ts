@@ -9,6 +9,7 @@ export interface AIMiddlewareConfig {
 }
 
 export interface RequestContext {
+  pathname: string;
   url: string;
   method: string;
   headers: Record<string, string>;

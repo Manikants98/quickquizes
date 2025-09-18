@@ -118,40 +118,81 @@ export async function POST(request: NextRequest) {
       prompt = getQuestionPrompt(topic, difficulty, count);
     }
 
-    try {
-      const result = await geminiModel.generateContent(prompt);
-      const response = result.response.text();
+    // Retry logic with exponential backoff
+    const maxRetries = 3;
+    let lastError: any;
 
-      const cleanedResponse = response
-        .replace(/```json\n?/g, "")
-        .replace(/```\n?/g, "")
-        .trim();
+    for (let attempt = 1; attempt <= maxRetries; attempt++) {
+      try {
+        const result = await geminiModel.generateContent(prompt);
+        const response = result.response.text();
 
-      const generatedContent = JSON.parse(cleanedResponse);
+        const cleanedResponse = response
+          .replace(/```json\n?/g, "")
+          .replace(/```\n?/g, "")
+          .trim();
 
-      if (generatedContent && typeof generatedContent === "object") {
-        if (count > 1 || bulkPrompt) {
-          return NextResponse.json({
-            success: true,
-            questions: generatedContent.questions || [generatedContent],
-          });
-        } else {
-          return NextResponse.json({
-            success: true,
-            question: generatedContent,
-          });
+        const generatedContent = JSON.parse(cleanedResponse);
+
+        if (generatedContent && typeof generatedContent === "object") {
+          if (count > 1 || bulkPrompt) {
+            return NextResponse.json({
+              success: true,
+              questions: generatedContent.questions || [generatedContent],
+            });
+          } else {
+            return NextResponse.json({
+              success: true,
+              question: generatedContent,
+            });
+          }
         }
+      } catch (aiError: any) {
+        lastError = aiError;
+
+        // Check if it's a retryable error (503 overloaded or rate limit)
+        const isRetryable =
+          aiError.message?.includes("503") ||
+          aiError.message?.includes("overloaded") ||
+          aiError.message?.includes("rate limit");
+
+        if (isRetryable && attempt < maxRetries) {
+          console.warn(
+            `Gemini API overloaded (attempt ${attempt}/${maxRetries}), retrying in ${Math.pow(
+              2,
+              attempt
+            )} seconds...`
+          );
+
+          // Exponential backoff: wait 2^attempt seconds
+          await new Promise((resolve) =>
+            setTimeout(resolve, Math.pow(2, attempt) * 1000)
+          );
+          continue;
+        }
+
+        // If not retryable or max retries reached, break
+        break;
       }
-    } catch (aiError) {
-      console.log("AI generation failed:", aiError);
-      return NextResponse.json(
-        {
-          success: false,
-          error: "AI service temporarily unavailable. Please try again later.",
-        },
-        { status: 503 }
-      );
     }
+
+    // If we get here, all retries failed
+    console.log("AI generation failed after retries:", lastError);
+
+    const errorMessage = lastError?.message?.includes("overloaded")
+      ? "AI service is currently overloaded. Please try again in a few minutes."
+      : lastError?.message?.includes("API key")
+      ? "AI service configuration error. Please contact support."
+      : "AI service temporarily unavailable. Please try again later.";
+
+    return NextResponse.json(
+      {
+        success: false,
+        error: errorMessage,
+        retryAfter: 60, // Suggest retry after 60 seconds
+      },
+      { status: 503 }
+    );
   } catch (error) {
     console.error("Error generating AI question:", error);
     return NextResponse.json(

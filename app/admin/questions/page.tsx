@@ -7,10 +7,13 @@ import {
   Card,
   Checkbox,
   Group,
+  Loader,
   Modal,
   NumberInput,
+  Overlay,
   Select,
   SimpleGrid,
+  Skeleton,
   Stack,
   Text,
   TextInput,
@@ -75,6 +78,7 @@ const QuestionsPageContent = () => {
   const [aiGeneratingAnswerExplanation, setAiGeneratingAnswerExplanation] =
     useState(false);
   const [loading, setLoading] = useState(true);
+  const [submitting, setSubmitting] = useState(false);
 
   const questionForm = useForm<Question>({
     initialValues: {
@@ -199,6 +203,7 @@ const QuestionsPageContent = () => {
 
   const handleCreateQuestion = async (values: Question) => {
     try {
+      setSubmitting(true);
       const isEdit = !!values.id;
       const url = isEdit
         ? `/api/v1/questions/${values.id}`
@@ -242,6 +247,8 @@ const QuestionsPageContent = () => {
         message: "Failed to save question",
         color: "red",
       });
+    } finally {
+      setSubmitting(false);
     }
   };
 
@@ -749,9 +756,37 @@ const QuestionsPageContent = () => {
           },
           body: {
             padding: "0 0 1rem 0",
+            position: "relative",
           },
         }}
       >
+        {submitting && (
+          <Overlay
+            color="#fff"
+            backgroundOpacity={0.85}
+            style={{
+              position: "absolute",
+              top: 0,
+              left: 0,
+              right: 0,
+              bottom: 0,
+              zIndex: 1000,
+              display: "flex",
+              flexDirection: "column",
+              alignItems: "center",
+              justifyContent: "center",
+              gap: "1rem",
+            }}
+          >
+            <Loader size="lg" />
+            <Text size="sm" c="dimmed">
+              {questionForm.values.id
+                ? "Updating question..."
+                : "Creating question..."}
+            </Text>
+          </Overlay>
+        )}
+
         <form onSubmit={questionForm.onSubmit(handleCreateQuestion)}>
           <div
             style={{
@@ -774,6 +809,7 @@ const QuestionsPageContent = () => {
                 }}
                 loading={aiGenerating}
                 leftSection={<IconRobot size="1rem" />}
+                disabled={submitting}
               >
                 Generate Question with AI
               </Button>
@@ -784,6 +820,7 @@ const QuestionsPageContent = () => {
                 placeholder="Enter your question"
                 {...questionForm.getInputProps("question")}
                 required
+                disabled={submitting}
               />
 
               <Text size="sm" fw={500}>
@@ -796,6 +833,7 @@ const QuestionsPageContent = () => {
                       placeholder={`Option ${String.fromCharCode(65 + index)}`}
                       {...questionForm.getInputProps(`options.${index}`)}
                       required
+                      disabled={submitting}
                     />
                   </div>
                 )
@@ -810,6 +848,7 @@ const QuestionsPageContent = () => {
                 ]}
                 {...questionForm.getInputProps("difficulty")}
                 required
+                disabled={submitting}
               />
 
               <Button
@@ -817,6 +856,7 @@ const QuestionsPageContent = () => {
                 onClick={() => generateAIAnswerAndExplanation("both")}
                 loading={aiGeneratingAnswerExplanation}
                 leftSection={<IconRobot size="1rem" />}
+                disabled={submitting}
               >
                 AI Answer & Explanation
               </Button>
@@ -831,6 +871,7 @@ const QuestionsPageContent = () => {
                   }))}
                 {...questionForm.getInputProps("correctAnswer")}
                 required
+                disabled={submitting}
               />
 
               <Textarea
@@ -838,6 +879,7 @@ const QuestionsPageContent = () => {
                 placeholder="Explain why this answer is correct"
                 {...questionForm.getInputProps("explanation")}
                 rows={3}
+                disabled={submitting}
               />
             </Stack>
           </div>
@@ -852,10 +894,13 @@ const QuestionsPageContent = () => {
               <Button
                 variant="subtle"
                 onClick={() => setQuestionModalOpened(false)}
+                disabled={submitting}
               >
                 Cancel
               </Button>
-              <Button type="submit">Save Question</Button>
+              <Button type="submit" loading={submitting} disabled={submitting}>
+                Save Question
+              </Button>
             </Group>
           </div>
         </form>
