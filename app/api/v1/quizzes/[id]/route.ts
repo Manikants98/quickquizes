@@ -11,9 +11,17 @@ export async function GET(
 
     const { id: quizId } = await params;
 
+    // Validate quiz ID format
+    if (!quizId || typeof quizId !== 'string' || quizId.trim().length === 0) {
+      return NextResponse.json(
+        { success: false, error: "Invalid quiz ID" },
+        { status: 400 }
+      );
+    }
+
     const quiz = await prisma.quiz.findUnique({
       where: {
-        id: quizId,
+        id: quizId.trim(),
       },
       include: {
         createdBy: true,
@@ -70,22 +78,39 @@ export async function PUT(
 
     const { id: quizId } = await params;
 
-    if (!title) {
+    // Validate quiz ID format
+    if (!quizId || typeof quizId !== 'string' || quizId.trim().length === 0) {
+      return NextResponse.json(
+        { success: false, error: "Invalid quiz ID" },
+        { status: 400 }
+      );
+    }
+
+    // Validate required fields
+    if (!title || typeof title !== 'string' || title.trim().length === 0) {
       return NextResponse.json(
         { success: false, error: "Title is required" },
         { status: 400 }
       );
     }
 
+    // Validate timeLimit if provided
+    if (timeLimit !== undefined && (typeof timeLimit !== 'number' || timeLimit < 1 || timeLimit > 300)) {
+      return NextResponse.json(
+        { success: false, error: "Time limit must be between 1 and 300 minutes" },
+        { status: 400 }
+      );
+    }
+
     const updateData = {
-      title,
-      description: description || "",
+      title: title.trim(),
+      description: description ? description.trim() : "",
       timeLimit: timeLimit || 30,
       isPublic: isPublic !== false,
     };
 
     const updatedQuiz = await prisma.quiz.update({
-      where: { id: quizId },
+      where: { id: quizId.trim() },
       data: updateData,
       include: {
         createdBy: true,
@@ -138,8 +163,29 @@ export async function DELETE(
 
     const { id: quizId } = await params;
 
+    // Validate quiz ID format
+    if (!quizId || typeof quizId !== 'string' || quizId.trim().length === 0) {
+      return NextResponse.json(
+        { success: false, error: "Invalid quiz ID" },
+        { status: 400 }
+      );
+    }
+
+    // Check if quiz exists before deletion
+    const existingQuiz = await prisma.quiz.findUnique({
+      where: { id: quizId.trim() },
+      include: { createdBy: true },
+    });
+
+    if (!existingQuiz) {
+      return NextResponse.json(
+        { success: false, error: "Quiz not found" },
+        { status: 404 }
+      );
+    }
+
     const deletedQuiz = await prisma.quiz.delete({
-      where: { id: quizId },
+      where: { id: quizId.trim() },
       include: {
         createdBy: true,
       },

@@ -9,22 +9,43 @@ export async function GET(
 
     const { id: quizId } = await params;
     const { searchParams } = new URL(request.url);
-    const page = parseInt(searchParams.get("page") || "1");
-    const limit = parseInt(searchParams.get("limit") || "10");
+    const page = Math.max(1, parseInt(searchParams.get("page") || "1"));
+    const limit = Math.min(100, Math.max(1, parseInt(searchParams.get("limit") || "10")));
+
+    // Validate quiz ID format
+    if (!quizId || typeof quizId !== 'string' || quizId.trim().length === 0) {
+      return NextResponse.json(
+        { success: false, error: "Invalid quiz ID" },
+        { status: 400 }
+      );
+    }
+
+    // Check if quiz exists
+    const quiz = await prisma.quiz.findUnique({
+      where: { id: quizId.trim() },
+      select: { id: true },
+    });
+
+    if (!quiz) {
+      return NextResponse.json(
+        { success: false, error: "Quiz not found" },
+        { status: 404 }
+      );
+    }
 
     // Calculate pagination
     const skip = (page - 1) * limit;
 
     // Get total count
     const total = await prisma.quizQuestion.count({
-      where: { quizId },
+      where: { quizId: quizId.trim() },
     });
 
     const questions = await prisma.quizQuestion.findMany({
       skip,
       take: limit,
       where: {
-        quizId: quizId,
+        quizId: quizId.trim(),
       },
       include: {
         question: true,
@@ -75,15 +96,65 @@ export async function POST(
 
     const { id: quizId } = await params;
 
-    if (
-      !question ||
-      !options ||
-      options.length !== 4 ||
-      correctAnswer === undefined
-    ) {
+    // Validate quiz ID format
+    if (!quizId || typeof quizId !== 'string' || quizId.trim().length === 0) {
       return NextResponse.json(
-        { success: false, error: "Invalid question data" },
+        { success: false, error: "Invalid quiz ID" },
         { status: 400 }
+      );
+    }
+
+    // Validate required fields
+    if (!question || typeof question !== 'string' || question.trim().length === 0) {
+      return NextResponse.json(
+        { success: false, error: "Question text is required" },
+        { status: 400 }
+      );
+    }
+
+    if (!Array.isArray(options) || options.length !== 4) {
+      return NextResponse.json(
+        { success: false, error: "Exactly 4 options are required" },
+        { status: 400 }
+      );
+    }
+
+    // Validate all options are non-empty strings
+    for (let i = 0; i < options.length; i++) {
+      if (!options[i] || typeof options[i] !== 'string' || options[i].trim().length === 0) {
+        return NextResponse.json(
+          { success: false, error: `Option ${i + 1} is required` },
+          { status: 400 }
+        );
+      }
+    }
+
+    if (typeof correctAnswer !== 'number' || correctAnswer < 0 || correctAnswer > 3) {
+      return NextResponse.json(
+        { success: false, error: "Correct answer must be between 0 and 3" },
+        { status: 400 }
+      );
+    }
+
+    // Validate difficulty
+    const validDifficulties = ['easy', 'medium', 'hard'];
+    if (!difficulty || !validDifficulties.includes(difficulty.toLowerCase())) {
+      return NextResponse.json(
+        { success: false, error: "Difficulty must be easy, medium, or hard" },
+        { status: 400 }
+      );
+    }
+
+    // Check if quiz exists
+    const quiz = await prisma.quiz.findUnique({
+      where: { id: quizId.trim() },
+      select: { id: true },
+    });
+
+    if (!quiz) {
+      return NextResponse.json(
+        { success: false, error: "Quiz not found" },
+        { status: 404 }
       );
     }
 
@@ -102,7 +173,7 @@ export async function POST(
 
     // Get the next order number for this quiz
     const lastQuestion = await prisma.quizQuestion.findFirst({
-      where: { quizId },
+      where: { quizId: quizId.trim() },
       orderBy: { order: "desc" },
     });
     const nextOrder = (lastQuestion?.order || 0) + 1;
@@ -110,14 +181,14 @@ export async function POST(
     // Create the question first
     const newQuestion = await prisma.question.create({
       data: {
-        question,
-        option1: options[0],
-        option2: options[1],
-        option3: options[2],
-        option4: options[3],
+        question: question.trim(),
+        option1: options[0].trim(),
+        option2: options[1].trim(),
+        option3: options[2].trim(),
+        option4: options[3].trim(),
         correctAnswer: correctAnswer + 1, // Convert from 0-based to 1-based
         difficulty: difficulty.toUpperCase(),
-        explanation: explanation || "",
+        explanation: explanation ? explanation.trim() : "",
         createdById: adminUser!.id,
       },
     });
@@ -125,7 +196,7 @@ export async function POST(
     // Link the question to the quiz
     await prisma.quizQuestion.create({
       data: {
-        quizId,
+        quizId: quizId.trim(),
         questionId: newQuestion.id,
         order: nextOrder,
         points: 1,
