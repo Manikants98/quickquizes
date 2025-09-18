@@ -15,7 +15,8 @@ class HomePage extends StatefulWidget {
   State<HomePage> createState() => _HomePageState();
 }
 
-class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin {
+class _HomePageState extends State<HomePage>
+    with SingleTickerProviderStateMixin {
   Map<String, dynamic> overallStats = {};
   Map<String, Map<String, dynamic>> categoryStats = {};
   List<QuizCategory> categories = [];
@@ -148,7 +149,9 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
             Text(
               'Start taking quizzes to see your progress, statistics, and performance analytics here.',
               style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
+                color: Theme.of(
+                  context,
+                ).colorScheme.onSurface.withValues(alpha: 0.7),
               ),
               textAlign: TextAlign.center,
             ),
@@ -179,9 +182,9 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
       await _loadStatistics();
     } catch (e) {
       if (mounted && !_isDisposed) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Failed to refresh: $e')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Failed to refresh: $e')));
       }
     }
   }
@@ -291,7 +294,7 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
                     style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                       color: Theme.of(
                         context,
-                      ).colorScheme.onSurface.withOpacity(0.7),
+                      ).colorScheme.onSurface.withValues(alpha: 0.7),
                     ),
                   ),
                 ),
@@ -315,7 +318,7 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
     if (_isDisposed || (overallStats['totalQuizzesAttempted'] ?? 0) == 0) {
       return const SizedBox.shrink();
     }
-    
+
     // Skip if we're in the process of disposing
     if (!mounted) return const SizedBox.shrink();
 
@@ -375,7 +378,7 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
     if (_isDisposed || categoryStats.isEmpty) {
       return const SizedBox.shrink();
     }
-    
+
     // Skip if we're in the process of disposing
     if (!mounted) return const SizedBox.shrink();
 
@@ -480,30 +483,30 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
     if (_isDisposed || categoryStats.isEmpty) {
       return const SizedBox.shrink();
     }
-    
+
     // Skip if we're in the process of disposing
     if (!mounted) return const SizedBox.shrink();
-    
+
     // Filter and sort categories by best score
-    final sortedCategories = categories.where((category) {
-      final stats = categoryStats[category.id];
-      return stats != null && stats['bestScore'] != null;
-    }).toList()
-    ..sort((a, b) {
-      final statsA = categoryStats[a.id]!;
-      final statsB = categoryStats[b.id]!;
-      final scoreA = _getBestScorePercentage(statsA);
-      final scoreB = _getBestScorePercentage(statsB);
-      return scoreB.compareTo(scoreA); // Sort in descending order
-    });
-    
+    final sortedCategories =
+        categories.where((category) {
+          final stats = categoryStats[category.id];
+          return stats != null && stats['bestScore'] != null;
+        }).toList()..sort((a, b) {
+          final statsA = categoryStats[a.id]!;
+          final statsB = categoryStats[b.id]!;
+          final scoreA = _getBestScorePercentage(statsA);
+          final scoreB = _getBestScorePercentage(statsB);
+          return scoreB.compareTo(scoreA); // Sort in descending order
+        });
+
     // Take top 5 categories
     final topCategories = sortedCategories.take(5).toList();
-    
+
     if (topCategories.isEmpty) {
       return const SizedBox.shrink();
     }
-    
+
     return Card(
       elevation: Theme.of(context).brightness == Brightness.dark ? 4 : 2,
       child: Padding(
@@ -518,11 +521,12 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
               ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 12),
-            ...topCategories.map((category) {
-              final stats = categoryStats[category.id]!;
-              final percentage = _getBestScorePercentage(stats);
-              return _buildPerformanceItem(category, percentage);
-            })
+            ...topCategories
+                .map((category) {
+                  final stats = categoryStats[category.id]!;
+                  final percentage = _getBestScorePercentage(stats);
+                  return _buildPerformanceItem(category, percentage);
+                })
                 .take(5),
           ],
         ),

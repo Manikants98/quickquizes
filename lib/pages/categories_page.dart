@@ -117,7 +117,7 @@ class _CategoriesState extends State<Categories> {
                 width: 60,
                 height: 60,
                 decoration: BoxDecoration(
-                  color: category.color.withOpacity(0.1),
+                  color: category.color.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: Icon(category.icon, size: 30, color: category.color),

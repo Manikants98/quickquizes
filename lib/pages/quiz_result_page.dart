@@ -315,7 +315,9 @@ class QuizResultPage extends StatelessWidget {
               width: 40,
               height: 4,
               decoration: BoxDecoration(
-                color: Theme.of(context).colorScheme.outline.withOpacity(0.5),
+                color: Theme.of(
+                  context,
+                ).colorScheme.outline.withValues(alpha: 0.5),
                 borderRadius: BorderRadius.circular(2),
               ),
             ),
@@ -349,8 +351,8 @@ class QuizResultPage extends StatelessWidget {
                         ? 3
                         : 1,
                     shadowColor: Theme.of(context).colorScheme.shadow
-                        .withOpacity(
-                          Theme.of(context).brightness == Brightness.dark
+                        .withValues(
+                          alpha: Theme.of(context).brightness == Brightness.dark
                               ? 0.25
                               : 0.1,
                         ),
@@ -406,11 +408,15 @@ class QuizResultPage extends StatelessWidget {
                             IconData? icon;
 
                             if (isCorrectOption) {
-                              backgroundColor = Colors.green.withOpacity(0.1);
+                              backgroundColor = Colors.green.withValues(
+                                alpha: 0.1,
+                              );
                               textColor = Colors.green;
                               icon = Icons.check;
                             } else if (isUserAnswer && !isCorrect) {
-                              backgroundColor = Colors.red.withOpacity(0.1);
+                              backgroundColor = Colors.red.withValues(
+                                alpha: 0.1,
+                              );
                               textColor = Colors.red;
                               icon = Icons.close;
                             }
@@ -447,16 +453,16 @@ class QuizResultPage extends StatelessWidget {
                                 ],
                               ),
                             );
-                          }).toList(),
+                          }),
                           if (question.explanation.isNotEmpty) ...[
                             const SizedBox(height: 12),
                             Container(
                               padding: const EdgeInsets.all(12),
                               decoration: BoxDecoration(
-                                color: category.color.withOpacity(0.1),
+                                color: category.color.withValues(alpha: 0.1),
                                 borderRadius: BorderRadius.circular(8),
                                 border: Border.all(
-                                  color: category.color.withOpacity(0.3),
+                                  color: category.color.withValues(alpha: 0.3),
                                   width: 1,
                                 ),
                               ),
@@ -491,7 +497,7 @@ class QuizResultPage extends StatelessWidget {
                                           color: Theme.of(context)
                                               .colorScheme
                                               .onSurface
-                                              .withOpacity(0.8),
+                                              .withValues(alpha: 0.8),
                                         ),
                                   ),
                                 ],

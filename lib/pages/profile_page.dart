@@ -76,75 +76,88 @@ class _ProfilePageState extends State<ProfilePage> {
 
     // First Quiz Achievement
     if (totalQuizzes >= 1) {
-      achievements.add(Achievement(
-        id: 'first_quiz',
-        title: 'First Steps',
-        description: 'Completed your first quiz',
-        icon: Icons.play_arrow,
-        color: Colors.green,
-        isUnlocked: true,
-      ));
+      achievements.add(
+        Achievement(
+          id: 'first_quiz',
+          title: 'First Steps',
+          description: 'Completed your first quiz',
+          icon: Icons.play_arrow,
+          color: Colors.green,
+          isUnlocked: true,
+        ),
+      );
     }
 
     // Quiz Master Achievements
     if (totalQuizzes >= 10) {
-      achievements.add(Achievement(
-        id: 'quiz_master_10',
-        title: 'Quiz Enthusiast',
-        description: 'Completed 10 quizzes',
-        icon: Icons.star,
-        color: Colors.blue,
-        isUnlocked: true,
-      ));
+      achievements.add(
+        Achievement(
+          id: 'quiz_master_10',
+          title: 'Quiz Enthusiast',
+          description: 'Completed 10 quizzes',
+          icon: Icons.star,
+          color: Colors.blue,
+          isUnlocked: true,
+        ),
+      );
     }
 
     if (totalQuizzes >= 50) {
-      achievements.add(Achievement(
-        id: 'quiz_master_50',
-        title: 'Quiz Master',
-        description: 'Completed 50 quizzes',
-        icon: Icons.emoji_events,
-        color: Colors.orange,
-        isUnlocked: true,
-      ));
+      achievements.add(
+        Achievement(
+          id: 'quiz_master_50',
+          title: 'Quiz Master',
+          description: 'Completed 50 quizzes',
+          icon: Icons.emoji_events,
+          color: Colors.orange,
+          isUnlocked: true,
+        ),
+      );
     }
 
     // Perfect Score Achievement
-    bool hasPerfectScore = catStats.values.any((stat) => 
-      (stat['bestScorePercentage'] ?? 0.0) >= 100.0);
+    bool hasPerfectScore = catStats.values.any(
+      (stat) => (stat['bestScorePercentage'] ?? 0.0) >= 100.0,
+    );
     if (hasPerfectScore) {
-      achievements.add(Achievement(
-        id: 'perfect_score',
-        title: 'Perfectionist',
-        description: 'Achieved 100% in a quiz',
-        icon: Icons.grade,
-        color: Colors.amber,
-        isUnlocked: true,
-      ));
+      achievements.add(
+        Achievement(
+          id: 'perfect_score',
+          title: 'Perfectionist',
+          description: 'Achieved 100% in a quiz',
+          icon: Icons.grade,
+          color: Colors.amber,
+          isUnlocked: true,
+        ),
+      );
     }
 
     // High Achiever
     if (averageScore >= 80.0) {
-      achievements.add(Achievement(
-        id: 'high_achiever',
-        title: 'High Achiever',
-        description: 'Maintained 80%+ average score',
-        icon: Icons.trending_up,
-        color: Colors.purple,
-        isUnlocked: true,
-      ));
+      achievements.add(
+        Achievement(
+          id: 'high_achiever',
+          title: 'High Achiever',
+          description: 'Maintained 80%+ average score',
+          icon: Icons.trending_up,
+          color: Colors.purple,
+          isUnlocked: true,
+        ),
+      );
     }
 
     // Category Explorer
     if (categoriesCompleted >= 3) {
-      achievements.add(Achievement(
-        id: 'category_explorer',
-        title: 'Category Explorer',
-        description: 'Attempted quizzes in 3+ categories',
-        icon: Icons.explore,
-        color: Colors.teal,
-        isUnlocked: true,
-      ));
+      achievements.add(
+        Achievement(
+          id: 'category_explorer',
+          title: 'Category Explorer',
+          description: 'Attempted quizzes in 3+ categories',
+          icon: Icons.explore,
+          color: Colors.teal,
+          isUnlocked: true,
+        ),
+      );
     }
 
     return achievements;
@@ -161,9 +174,8 @@ class _ProfilePageState extends State<ProfilePage> {
             icon: const Icon(Icons.logout),
             onPressed: () async {
               await AuthService.logout();
-              if (mounted) {
-                Navigator.pushReplacementNamed(context, '/auth');
-              }
+              if (!mounted) return;
+              Navigator.pushReplacementNamed(context, '/auth');
             },
           ),
         ],
@@ -203,8 +215,8 @@ class _ProfilePageState extends State<ProfilePage> {
               radius: 40,
               backgroundColor: Theme.of(context).colorScheme.primary,
               child: Text(
-                (userName?.isNotEmpty == true) 
-                    ? userName![0].toUpperCase() 
+                (userName?.isNotEmpty == true)
+                    ? userName![0].toUpperCase()
                     : 'U',
                 style: const TextStyle(
                   fontSize: 32,
@@ -227,13 +239,16 @@ class _ProfilePageState extends State<ProfilePage> {
                   const SizedBox(height: 4),
                   Text(
                     userEmail ?? 'user@example.com',
-                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                      color: Colors.grey[600],
-                    ),
+                    style: Theme.of(
+                      context,
+                    ).textTheme.bodyMedium?.copyWith(color: Colors.grey[600]),
                   ),
                   const SizedBox(height: 8),
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 4,
+                    ),
                     decoration: BoxDecoration(
                       color: _getUserLevelColor(),
                       borderRadius: BorderRadius.circular(12),
@@ -265,9 +280,9 @@ class _ProfilePageState extends State<ProfilePage> {
           children: [
             Text(
               'Statistics Overview',
-              style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                fontWeight: FontWeight.bold,
-              ),
+              style: Theme.of(
+                context,
+              ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 16),
             Row(
@@ -319,13 +334,18 @@ class _ProfilePageState extends State<ProfilePage> {
     );
   }
 
-  Widget _buildStatCard(String title, String value, IconData icon, Color color) {
+  Widget _buildStatCard(
+    String title,
+    String value,
+    IconData icon,
+    Color color,
+  ) {
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: color.withOpacity(0.1),
+        color: color.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: color.withOpacity(0.3)),
+        border: Border.all(color: color.withValues(alpha: 0.3)),
       ),
       child: Column(
         children: [
@@ -342,10 +362,7 @@ class _ProfilePageState extends State<ProfilePage> {
           const SizedBox(height: 4),
           Text(
             title,
-            style: TextStyle(
-              fontSize: 12,
-              color: Colors.grey[600],
-            ),
+            style: TextStyle(fontSize: 12, color: Colors.grey[600]),
             textAlign: TextAlign.center,
           ),
         ],
@@ -361,16 +378,25 @@ class _ProfilePageState extends State<ProfilePage> {
     final chartData = categoryStats.entries
         .where((entry) => entry.value['isCompleted'] == true)
         .map((entry) {
-      final categoryName = categories
-          .firstWhere((cat) => cat.id == entry.key, orElse: () => 
-              QuizCategory(id: '', name: 'Unknown', description: '', 
-                          icon: Icons.quiz, questions: [], color: Colors.grey))
-          .name;
-      return ChartData(
-        categoryName,
-        (entry.value['bestScorePercentage'] ?? 0.0).toDouble(),
-      );
-    }).toList();
+          final categoryName = categories
+              .firstWhere(
+                (cat) => cat.id == entry.key,
+                orElse: () => QuizCategory(
+                  id: '',
+                  name: 'Unknown',
+                  description: '',
+                  icon: Icons.quiz,
+                  questions: [],
+                  color: Colors.grey,
+                ),
+              )
+              .name;
+          return ChartData(
+            categoryName,
+            (entry.value['bestScorePercentage'] ?? 0.0).toDouble(),
+          );
+        })
+        .toList();
 
     if (chartData.isEmpty) {
       return const SizedBox.shrink();
@@ -384,9 +410,9 @@ class _ProfilePageState extends State<ProfilePage> {
           children: [
             Text(
               'Performance by Category',
-              style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                fontWeight: FontWeight.bold,
-              ),
+              style: Theme.of(
+                context,
+              ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 16),
             SizedBox(
@@ -396,10 +422,7 @@ class _ProfilePageState extends State<ProfilePage> {
                   labelRotation: -45,
                   labelIntersectAction: AxisLabelIntersectAction.rotate45,
                 ),
-                primaryYAxis: NumericAxis(
-                  minimum: 0,
-                  maximum: 100,
-                ),
+                primaryYAxis: NumericAxis(minimum: 0, maximum: 100),
                 series: <CartesianSeries<ChartData, String>>[
                   ColumnSeries<ChartData, String>(
                     dataSource: chartData,
@@ -429,9 +452,9 @@ class _ProfilePageState extends State<ProfilePage> {
           children: [
             Text(
               'Achievements',
-              style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                fontWeight: FontWeight.bold,
-              ),
+              style: Theme.of(
+                context,
+              ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 16),
             if (achievements.isEmpty)
@@ -445,8 +468,9 @@ class _ProfilePageState extends State<ProfilePage> {
               Wrap(
                 spacing: 8,
                 runSpacing: 8,
-                children: achievements.map((achievement) => 
-                  _buildAchievementBadge(achievement)).toList(),
+                children: achievements
+                    .map((achievement) => _buildAchievementBadge(achievement))
+                    .toList(),
               ),
           ],
         ),
@@ -458,12 +482,12 @@ class _ProfilePageState extends State<ProfilePage> {
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: achievement.color.withOpacity(0.1),
+        color: achievement.color.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(12),
         border: Border.all(
-          color: achievement.isUnlocked 
-              ? achievement.color 
-              : Colors.grey.withOpacity(0.3),
+          color: achievement.isUnlocked
+              ? achievement.color
+              : Colors.grey.withValues(alpha: 0.3),
         ),
       ),
       child: Column(
@@ -487,10 +511,7 @@ class _ProfilePageState extends State<ProfilePage> {
           const SizedBox(height: 4),
           Text(
             achievement.description,
-            style: TextStyle(
-              fontSize: 10,
-              color: Colors.grey[600],
-            ),
+            style: TextStyle(fontSize: 10, color: Colors.grey[600]),
             textAlign: TextAlign.center,
           ),
         ],
@@ -507,15 +528,15 @@ class _ProfilePageState extends State<ProfilePage> {
           children: [
             Text(
               'Category Performance',
-              style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                fontWeight: FontWeight.bold,
-              ),
+              style: Theme.of(
+                context,
+              ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 16),
             ...categories.map((category) {
               final stats = categoryStats[category.id] ?? {};
               return _buildCategoryPerformanceItem(category, stats);
-            }).toList(),
+            }),
           ],
         ),
       ),
@@ -535,7 +556,7 @@ class _ProfilePageState extends State<ProfilePage> {
       margin: const EdgeInsets.only(bottom: 12),
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        border: Border.all(color: Colors.grey.withOpacity(0.3)),
+        border: Border.all(color: Colors.grey.withValues(alpha: 0.3)),
         borderRadius: BorderRadius.circular(8),
       ),
       child: Row(
@@ -557,25 +578,16 @@ class _ProfilePageState extends State<ProfilePage> {
                 if (isCompleted) ...[
                   Text(
                     'Best: $bestScore questions (${bestPercentage.toStringAsFixed(1)}%)',
-                    style: TextStyle(
-                      fontSize: 12,
-                      color: Colors.grey[600],
-                    ),
+                    style: TextStyle(fontSize: 12, color: Colors.grey[600]),
                   ),
                   Text(
                     'Attempts: $totalAttempts',
-                    style: TextStyle(
-                      fontSize: 12,
-                      color: Colors.grey[600],
-                    ),
+                    style: TextStyle(fontSize: 12, color: Colors.grey[600]),
                   ),
                 ] else ...[
                   Text(
                     'Not attempted yet',
-                    style: TextStyle(
-                      fontSize: 12,
-                      color: Colors.grey[600],
-                    ),
+                    style: TextStyle(fontSize: 12, color: Colors.grey[600]),
                   ),
                 ],
               ],
@@ -614,11 +626,16 @@ class _ProfilePageState extends State<ProfilePage> {
   Color _getUserLevelColor() {
     final level = _getUserLevel();
     switch (level) {
-      case 'Expert': return Colors.purple;
-      case 'Advanced': return Colors.orange;
-      case 'Intermediate': return Colors.blue;
-      case 'Beginner': return Colors.green;
-      default: return Colors.grey;
+      case 'Expert':
+        return Colors.purple;
+      case 'Advanced':
+        return Colors.orange;
+      case 'Intermediate':
+        return Colors.blue;
+      case 'Beginner':
+        return Colors.green;
+      default:
+        return Colors.grey;
     }
   }
 
