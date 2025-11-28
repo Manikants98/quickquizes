@@ -394,12 +394,11 @@ export default function DashboardPage() {
                             key={index}
                             style={{
                               position: "relative",
-                              paddingLeft: "40px",
                               marginBottom: index < 4 ? "16px" : "0",
                             }}
                           >
                             {/* Timeline line */}
-                            {index < 4 && (
+                            {/* {index < 4 && (
                               <Box
                                 style={{
                                   position: "absolute",
@@ -411,10 +410,9 @@ export default function DashboardPage() {
                                     "var(--mantine-color-gray-3)",
                                 }}
                               />
-                            )}
-
+                            )} */}
                             {/* Timeline dot */}
-                            <Box
+                            {/* <Box
                               style={{
                                 position: "absolute",
                                 left: "8px",
@@ -444,10 +442,8 @@ export default function DashboardPage() {
                                   ?.charAt(0)
                                   ?.toUpperCase() || "S"}
                               </Text>
-                            </Box>
-
+                            </Box> */}
                             <Card
-                              withBorder
                               radius="md"
                               p="md"
                               bg="var(--mantine-color-body)"

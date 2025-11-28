@@ -11,8 +11,7 @@ export async function GET(
 
     const { id: quizId } = await params;
 
-    // Validate quiz ID format
-    if (!quizId || typeof quizId !== 'string' || quizId.trim().length === 0) {
+    if (!quizId || typeof quizId !== "string" || quizId.trim().length === 0) {
       return NextResponse.json(
         { success: false, error: "Invalid quiz ID" },
         { status: 400 }
@@ -25,6 +24,14 @@ export async function GET(
       },
       include: {
         createdBy: true,
+        quizQuestions: {
+          include: {
+            question: true,
+          },
+          orderBy: {
+            order: "asc",
+          },
+        },
         _count: {
           select: {
             quizQuestions: true,
@@ -46,13 +53,27 @@ export async function GET(
       quiz: {
         id: quiz.id,
         title: quiz.title,
-        description: quiz.description,
+        description: quiz.description || "",
+        category: quiz.category || "General",
+        duration: quiz.timeLimit,
+        totalQuestions: quiz._count.quizQuestions,
+        difficulty: quiz.difficulty?.toLowerCase() || "medium",
+        imageUrl: quiz.imageUrl || "",
+        questions: quiz.quizQuestions.map((qq) => ({
+          id: qq.question.id,
+          question: qq.question.question,
+          options: [
+            qq.question.option1,
+            qq.question.option2,
+            qq.question.option3,
+            qq.question.option4,
+          ],
+          correctAnswerIndex: qq.question.correctAnswer - 1,
+          explanation: qq.question.explanation || "",
+        })),
         timeLimit: quiz.timeLimit,
-        isPublic: quiz.isPublic,
-        _count: {
-          questions: quiz._count.quizQuestions,
-        },
         questionCount: quiz._count.quizQuestions,
+        isPublic: quiz.isPublic,
         attemptCount: quiz._count.quizAttempts,
         createdAt: quiz.createdAt,
         createdBy: quiz.createdBy.name,
@@ -78,33 +99,41 @@ export async function PUT(
 
     const { id: quizId } = await params;
 
-    // Validate quiz ID format
-    if (!quizId || typeof quizId !== 'string' || quizId.trim().length === 0) {
+    if (!quizId || typeof quizId !== "string" || quizId.trim().length === 0) {
       return NextResponse.json(
         { success: false, error: "Invalid quiz ID" },
         { status: 400 }
       );
     }
 
-    // Validate required fields
-    if (!title || typeof title !== 'string' || title.trim().length === 0) {
+    if (!title || typeof title !== "string" || title.trim().length === 0) {
       return NextResponse.json(
         { success: false, error: "Title is required" },
         { status: 400 }
       );
     }
 
-    // Validate timeLimit if provided
-    if (timeLimit !== undefined && (typeof timeLimit !== 'number' || timeLimit < 1 || timeLimit > 300)) {
+    if (
+      timeLimit !== undefined &&
+      (typeof timeLimit !== "number" || timeLimit < 1 || timeLimit > 300)
+    ) {
       return NextResponse.json(
-        { success: false, error: "Time limit must be between 1 and 300 minutes" },
+        {
+          success: false,
+          error: "Time limit must be between 1 and 300 minutes",
+        },
         { status: 400 }
       );
     }
 
+    const { category, difficulty, imageUrl } = body;
+
     const updateData = {
       title: title.trim(),
       description: description ? description.trim() : "",
+      category: category || null,
+      difficulty: difficulty ? difficulty.toUpperCase() : undefined,
+      imageUrl: imageUrl || null,
       timeLimit: timeLimit || 30,
       isPublic: isPublic !== false,
     };
@@ -123,7 +152,6 @@ export async function PUT(
       },
     });
 
-    // Log quiz update activity
     await ActivityService.logActivity(
       updatedQuiz.createdById,
       ActivityType.QUIZ_UPDATED,
@@ -136,10 +164,15 @@ export async function PUT(
       quiz: {
         id: updatedQuiz.id,
         title: updatedQuiz.title,
-        description: updatedQuiz.description,
+        description: updatedQuiz.description || "",
+        category: updatedQuiz.category || "General",
+        duration: updatedQuiz.timeLimit,
+        totalQuestions: updatedQuiz._count.quizQuestions,
+        difficulty: updatedQuiz.difficulty?.toLowerCase() || "medium",
+        imageUrl: updatedQuiz.imageUrl || "",
         timeLimit: updatedQuiz.timeLimit,
-        isPublic: updatedQuiz.isPublic,
         questionCount: updatedQuiz._count.quizQuestions,
+        isPublic: updatedQuiz.isPublic,
         attemptCount: updatedQuiz._count.quizAttempts,
         createdAt: updatedQuiz.createdAt,
         createdBy: updatedQuiz.createdBy.name,
@@ -163,15 +196,13 @@ export async function DELETE(
 
     const { id: quizId } = await params;
 
-    // Validate quiz ID format
-    if (!quizId || typeof quizId !== 'string' || quizId.trim().length === 0) {
+    if (!quizId || typeof quizId !== "string" || quizId.trim().length === 0) {
       return NextResponse.json(
         { success: false, error: "Invalid quiz ID" },
         { status: 400 }
       );
     }
 
-    // Check if quiz exists before deletion
     const existingQuiz = await prisma.quiz.findUnique({
       where: { id: quizId.trim() },
       include: { createdBy: true },
@@ -191,7 +222,6 @@ export async function DELETE(
       },
     });
 
-    // Log quiz deletion activity
     await ActivityService.logActivity(
       deletedQuiz.createdById,
       ActivityType.QUIZ_DELETED,
